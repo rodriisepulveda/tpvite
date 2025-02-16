@@ -20,13 +20,22 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <ToastContainer
-          limit={3}
-          autoClose={3000}
-          pauseOnHover={false}
-          closeButton={false}
-          newestOnTop
-        />
+      <ToastContainer
+  limit={3}
+  theme="colored"
+  autoClose={3000}
+  pauseOnHover={false}
+  closeButton
+  newestOnTop
+  position="top-right" // Se muestra centrado arriba
+  style={{
+    top: '70px',
+    borderRadius: '10px',
+  }}
+  hideProgressBar={false} 
+  draggable
+/>
+
         <Navbar />
         <Routes>
           <Route path="/" element={<Home />} />

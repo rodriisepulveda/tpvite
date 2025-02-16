@@ -4,9 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/authcontext.jsx';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-
 
 const MisReservas = () => {
   const [reservas, setReservas] = useState([]);
@@ -17,28 +14,23 @@ const MisReservas = () => {
   useEffect(() => {
     const fetchReservas = async () => {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem('token');
 
       if (!token) {
-        toast.error(
-          "Tu sesión ha expirado. Por favor, inicia sesión nuevamente."
-        );
-        navigate("/login");
+        toast.error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+        navigate('/login');
         return;
       }
 
       try {
-        const res = await axios.get(
-          "http://localhost:5000/api/turnos/misreservas",
-          {
-            headers: { "x-auth-token": token },
-          }
-        );
-        console.log("Reservas obtenidas:", res.data);
+        const res = await axios.get('http://localhost:5000/api/turnos/misreservas', {
+          headers: { 'x-auth-token': token },
+        });
+        console.log('Reservas obtenidas:', res.data);
         setReservas(res.data);
       } catch (err) {
-        console.error("Error al obtener las reservas:", err);
-        toast.error("Error al obtener las reservas.");
+        console.error('Error al obtener las reservas:', err);
+        toast.error('Error al obtener las reservas.');
       } finally {
         setLoading(false);
       }
@@ -47,32 +39,35 @@ const MisReservas = () => {
     fetchReservas();
   }, [navigate]);
 
+  const ajustarFecha = (dateString) => {
+    const date = new Date(dateString);
+    return `${date.getUTCDate()}/${date.getUTCMonth() + 1}/${date.getUTCFullYear()}`;
+  };
+
   const handleDelete = async (turnoId) => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem('token');
     const result = await Swal.fire({
-      title: "¿Estás seguro?",
-      text: "Esta acción eliminará tu reserva.",
-      icon: "warning",
+      title: '¿Estás seguro?',
+      text: 'Esta acción eliminará tu reserva. Esto no se puede deshacer.',
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
     });
 
     if (!result.isConfirmed) return;
 
     try {
       await axios.delete(`http://localhost:5000/api/turnos/${turnoId}`, {
-        headers: { "x-auth-token": token },
+        headers: { 'x-auth-token': token },
       });
-      setReservas((prevReservas) =>
-        prevReservas.filter((reserva) => reserva._id !== turnoId)
-      );
-      toast.success("Reserva eliminada correctamente.");
+      setReservas((prevReservas) => prevReservas.filter((reserva) => reserva._id !== turnoId));
+      toast.success('Reserva eliminada correctamente.');
     } catch (err) {
-      console.error("Error al eliminar la reserva:", err);
-      toast.error("Error al eliminar la reserva.");
+      console.error('Error al eliminar la reserva:', err);
+      toast.error('Error al eliminar la reserva.');
     }
   };
 
@@ -91,27 +86,14 @@ const MisReservas = () => {
         </div>
       ) : reservas.length > 0 ? (
         reservas.map((reserva) => {
-          console.log("Reserva actual:", reserva);
+          console.log('Reserva actual:', reserva);
 
           const canchaName =
-            typeof reserva.cancha?.name === "string"
-              ? reserva.cancha.name
-              : "Cancha desconocida";
-          const fechaReserva = reserva.date
-            ? new Date(reserva.date).toLocaleDateString("es-ES")
-            : "Fecha no disponible";
-          const horaInicio =
-            typeof reserva.startTime === "string"
-              ? reserva.startTime
-              : "Hora de inicio no disponible";
-          const horaFin =
-            typeof reserva.endTime === "string"
-              ? reserva.endTime
-              : "Hora de fin no disponible";
-          const descripcion =
-            typeof reserva.description === "string"
-              ? reserva.description
-              : "Sin descripción";
+            typeof reserva.cancha?.name === 'string' ? reserva.cancha.name : 'Cancha desconocida';
+          const fechaReserva = reserva.date ? ajustarFecha(reserva.date) : 'Fecha no disponible';
+          const horaInicio = typeof reserva.startTime === 'string' ? reserva.startTime : 'Hora de inicio no disponible';
+          const horaFin = typeof reserva.endTime === 'string' ? reserva.endTime : 'Hora de fin no disponible';
+          const descripcion = typeof reserva.description === 'string' ? reserva.description : 'Sin descripción';
 
           return (
             <div key={reserva._id} className="card mb-3 shadow">
@@ -124,16 +106,10 @@ const MisReservas = () => {
                   <p className="card-text">{descripcion}</p>
                 </div>
                 <div>
-                  <button
-                    className="btn btn-outline-danger me-2"
-                    onClick={() => handleDelete(reserva._id)}
-                  >
+                  <button className="btn btn-outline-danger me-2" onClick={() => handleDelete(reserva._id)}>
                     ❌ Eliminar
                   </button>
-                  <button
-                    className="btn btn-outline-primary"
-                    onClick={() => handleEdit(reserva._id)}
-                  >
+                  <button className="btn btn-outline-primary" onClick={() => handleEdit(reserva._id)}>
                     ✏️ Editar
                   </button>
                 </div>

@@ -60,11 +60,12 @@ const EditarReserva = () => {
       toast.error("Por favor selecciona un turno para continuar.");
       return;
     }
-
+  
     const token = localStorage.getItem("token");
     const result = await Swal.fire({
       title: "¿Estás seguro?",
-      text: "Esto actualizará tu reserva con el nuevo horario.",
+      text: "Esto actualizará tu reserva con el nuevo horario. Si es posible, el horario anterior volverá a estar disponible.",
+    
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
@@ -72,25 +73,27 @@ const EditarReserva = () => {
       confirmButtonText: "Sí, actualizar",
       cancelButtonText: "Cancelar",
     });
-
+  
     if (!result.isConfirmed) return;
-
+  
     try {
-      await axios.put(
-        `http://localhost:5000/api/turnos/${id}`,
-        {
-          date: selectedTurno.date,
-          startTime: selectedTurno.startTime,
-          endTime: selectedTurno.endTime,
-          cancha: selectedTurno.canchaId,
-        },
-        { headers: { "x-auth-token": token } }
-      );
-
+      const data = {
+        date: fechaNueva,
+        startTime: selectedTurno.startTime,
+        endTime: selectedTurno.endTime,
+        cancha: reserva.cancha._id,
+      };
+  
+      console.log("Datos a enviar:", data); // Agregamos un log para depuración
+  
+      await axios.put(`http://localhost:5000/api/turnos/${id}`, data, {
+        headers: { "x-auth-token": token },
+      });
+  
       toast.success("Reserva actualizada correctamente.");
       navigate("/misreservas");
     } catch (err) {
-      console.error("Error al actualizar la reserva:", err);
+      console.error("Error al actualizar la reserva:", err.response?.data || err.message);
       toast.error("Error al actualizar la reserva.");
     }
   };
