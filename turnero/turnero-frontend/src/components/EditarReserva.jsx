@@ -4,20 +4,19 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 
+const parseDateWithoutTimezone = (dateString) => {
+  const [year, month, day] = dateString.split("T")[0].split("-");
+  return `${year}-${month}-${day}`;
+};
+
 const EditarReserva = () => {
   const [reserva, setReserva] = useState(null);
   const [turnosLibres, setTurnosLibres] = useState([]);
   const [selectedTurno, setSelectedTurno] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [fechaNueva, setFechaNueva] = useState(formatDateToLocal(new Date()));
+  const [fechaNueva, setFechaNueva] = useState(parseDateWithoutTimezone(new Date().toISOString()));
   const { id } = useParams();
   const navigate = useNavigate();
-
-  const formatDateToLocal = (date) => {
-    const offset = -3; // GMT-3
-    date.setHours(date.getHours() + offset);
-    return date.toISOString().split("T")[0];
-  };
 
   useEffect(() => {
     const fetchReserva = async () => {
@@ -35,7 +34,7 @@ const EditarReserva = () => {
           headers: { "x-auth-token": token },
         });
         const reservaData = res.data;
-        reservaData.date = formatDateToLocal(new Date(reservaData.date));
+        reservaData.date = parseDateWithoutTimezone(reservaData.date);
         setReserva(reservaData);
         fetchTurnosLibres(reservaData.date, reservaData.cancha._id);
       } catch (err) {
