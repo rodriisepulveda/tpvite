@@ -26,7 +26,6 @@ const MisReservas = () => {
         const res = await axios.get('http://localhost:5000/api/turnos/misreservas', {
           headers: { 'x-auth-token': token },
         });
-        console.log('Reservas obtenidas:', res.data);
         setReservas(res.data);
       } catch (err) {
         console.error('Error al obtener las reservas:', err);
@@ -42,6 +41,13 @@ const MisReservas = () => {
   const ajustarFecha = (dateString) => {
     const date = new Date(dateString);
     return `${date.getUTCDate()}/${date.getUTCMonth() + 1}/${date.getUTCFullYear()}`;
+  };
+
+  const ajustarHora = (dateString) => {
+    const date = new Date(dateString);
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   };
 
   const handleDelete = async (turnoId) => {
@@ -86,14 +92,11 @@ const MisReservas = () => {
         </div>
       ) : reservas.length > 0 ? (
         reservas.map((reserva) => {
-          console.log('Reserva actual:', reserva);
-
-          const canchaName =
-            typeof reserva.cancha?.name === 'string' ? reserva.cancha.name : 'Cancha desconocida';
-          const fechaReserva = reserva.date ? ajustarFecha(reserva.date) : 'Fecha no disponible';
-          const horaInicio = typeof reserva.startTime === 'string' ? reserva.startTime : 'Hora de inicio no disponible';
-          const horaFin = typeof reserva.endTime === 'string' ? reserva.endTime : 'Hora de fin no disponible';
-          const descripcion = typeof reserva.description === 'string' ? reserva.description : 'Sin descripción';
+          const canchaName = reserva.cancha?.name || 'Cancha desconocida';
+          const fechaReserva = ajustarFecha(reserva.date);
+          const horaInicio = ajustarHora(reserva.startTime);
+          const horaFin = ajustarHora(reserva.endTime);
+          const descripcion = reserva.description || 'Sin descripción';
 
           return (
             <div key={reserva._id} className="card mb-3 shadow">

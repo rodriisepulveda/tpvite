@@ -38,20 +38,20 @@ const Turnos = () => {
       navigate('/login');
       return;
     }
-  
+
     try {
       const res = await axios.get(`http://localhost:5000/api/canchas`, {
         headers: { 'x-auth-token': token },
       });
-  
+
       const horariosLibresPromises = res.data.map(async (cancha) => {
         const horariosRes = await axios.get(`http://localhost:5000/api/turnos/libres`, {
           params: { date: selectedDate, cancha: cancha._id },
           headers: { 'x-auth-token': token },
         });
-        return { ...cancha, horariosLibres: horariosRes.data };
+        return { ...cancha, horariosLibres: horariosRes.data }; // Solo trae horarios libres desde Turno
       });
-  
+
       const canchasConHorariosLibres = await Promise.all(horariosLibresPromises);
       setCanchas(canchasConHorariosLibres);
     } catch (err) {
@@ -61,9 +61,9 @@ const Turnos = () => {
       setLoading(false);
     }
   };
-  ;
 
   useEffect(() => {
+    setCanchas([]); // Limpia el estado antes de recargar los datos
     fetchCanchas();
   }, [selectedDate, navigate]);
 
@@ -78,33 +78,8 @@ const Turnos = () => {
       navigate('/login');
       return;
     }
-  
+
     try {
-      // Verificar si el usuario ya tiene una reserva en esta cancha
-      const reservasExistentes = await axios.get(`http://localhost:5000/api/turnos/misreservas`, {
-        headers: { 'x-auth-token': token },
-      });
-  
-      const reservaEnMismaCancha = reservasExistentes.data.find(
-        (reserva) => reserva.cancha._id === canchaId
-      );
-  
-      if (reservaEnMismaCancha) {
-        const result = await Swal.fire({
-          title: 'Ya tienes una reserva en esta cancha',
-          text: '¿Deseas reservar de todos modos?',
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#3085d6',
-          cancelButtonColor: '#d33',
-          confirmButtonText: 'Sí, reservar',
-          cancelButtonText: 'Cancelar',
-        });
-  
-        if (!result.isConfirmed) return;
-      }
-  
-      // Proceso de reserva normal
       const result = await Swal.fire({
         title: '¿Estás seguro?',
         text: `Deseas reservar el turno de ${startTime} a ${endTime} en ${canchaName} a nombre de: ${user?.username}`,
@@ -115,11 +90,11 @@ const Turnos = () => {
         confirmButtonText: 'Sí, reservar',
         cancelButtonText: 'Cancelar',
       });
-  
+
       if (!result.isConfirmed) return;
-  
+
       setLoading(true);
-  
+
       await axios.post(
         `http://localhost:5000/api/turnos`,
         {
@@ -132,7 +107,7 @@ const Turnos = () => {
         },
         { headers: { 'x-auth-token': token } }
       );
-  
+
       toast.success('Turno reservado correctamente.');
       fetchCanchas();
     } catch (err) {
@@ -142,7 +117,6 @@ const Turnos = () => {
       setLoading(false);
     }
   };
-  
 
   return (
     <div className="container mt-5">
@@ -168,7 +142,11 @@ const Turnos = () => {
         </div>
       ) : (
         canchas.map((cancha) => (
-          <div key={cancha._id} className={`card mb-3 shadow ${selectedCancha === cancha._id ? 'border-primary' : ''}`} onClick={() => handleCanchaClick(cancha._id)}>
+          <div
+            key={cancha._id}
+            className={`card mb-3 shadow ${selectedCancha === cancha._id ? 'border-primary' : ''}`}
+            onClick={() => handleCanchaClick(cancha._id)}
+          >
             <div className="card-body">
               <h2 className="card-title">{cancha.name}</h2>
               <p className="card-text">Precio: {cancha.precio}</p>
@@ -181,19 +159,15 @@ const Turnos = () => {
                         <p className="card-text">
                           {horario.startTime} a {horario.endTime}
                         </p>
-                        {horario.usuario ? (
-                          <p className="card-text text-danger">Reservado</p>
-                        ) : (
-                          <button
-                            className="btn btn-success"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleReserve(cancha._id, horario._id, cancha.name, horario.startTime, horario.endTime);
-                            }}
-                          >
-                            Reservar
-                          </button>
-                        )}
+                        <button
+                          className="btn btn-success"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReserve(cancha._id, horario._id, cancha.name, horario.startTime, horario.endTime);
+                          }}
+                        >
+                          Reservar
+                        </button>
                       </div>
                     ))}
                   </div>
