@@ -9,9 +9,15 @@ const EditarReserva = () => {
   const [turnosLibres, setTurnosLibres] = useState([]);
   const [selectedTurno, setSelectedTurno] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [fechaNueva, setFechaNueva] = useState(new Date().toISOString().split("T")[0]);
+  const [fechaNueva, setFechaNueva] = useState(formatDateToLocal(new Date()));
   const { id } = useParams();
   const navigate = useNavigate();
+
+  const formatDateToLocal = (date) => {
+    const offset = -3; // GMT-3
+    date.setHours(date.getHours() + offset);
+    return date.toISOString().split("T")[0];
+  };
 
   useEffect(() => {
     const fetchReserva = async () => {
@@ -28,8 +34,10 @@ const EditarReserva = () => {
         const res = await axios.get(`http://localhost:5000/api/turnos/id/${id}`, {
           headers: { "x-auth-token": token },
         });
-        setReserva(res.data);
-        fetchTurnosLibres(res.data.date.split("T")[0], res.data.cancha._id);
+        const reservaData = res.data;
+        reservaData.date = formatDateToLocal(new Date(reservaData.date));
+        setReserva(reservaData);
+        fetchTurnosLibres(reservaData.date, reservaData.cancha._id);
       } catch (err) {
         console.error("Error al obtener la información de la reserva:", err);
         toast.error("Error al obtener la información de la reserva.");
@@ -60,12 +68,11 @@ const EditarReserva = () => {
       toast.error("Por favor selecciona un turno para continuar.");
       return;
     }
-  
+
     const token = localStorage.getItem("token");
     const result = await Swal.fire({
       title: "¿Estás seguro?",
-      text: "Esto actualizará tu reserva con el nuevo horario. Si es posible, el horario anterior volverá a estar disponible.",
-    
+      text: "Esto actualizará tu reserva con el nuevo horario.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
@@ -73,23 +80,21 @@ const EditarReserva = () => {
       confirmButtonText: "Sí, actualizar",
       cancelButtonText: "Cancelar",
     });
-  
+
     if (!result.isConfirmed) return;
-  
+
     try {
-      const data = {
-        date: fechaNueva,
-        startTime: selectedTurno.startTime,
-        endTime: selectedTurno.endTime,
-        cancha: reserva.cancha._id,
-      };
-  
-      console.log("Datos a enviar:", data); // Agregamos un log para depuración
-  
-      await axios.put(`http://localhost:5000/api/turnos/${id}`, data, {
-        headers: { "x-auth-token": token },
-      });
-  
+      await axios.put(
+        `http://localhost:5000/api/turnos/${id}`,
+        {
+          date: fechaNueva,
+          startTime: selectedTurno.startTime,
+          endTime: selectedTurno.endTime,
+          cancha: reserva.cancha._id,
+        },
+        { headers: { "x-auth-token": token } }
+      );
+
       toast.success("Reserva actualizada correctamente.");
       navigate("/misreservas");
     } catch (err) {
@@ -98,7 +103,7 @@ const EditarReserva = () => {
     }
   };
 
-  const minFecha = reserva ? new Date(reserva.date).toISOString().split("T")[0] : fechaNueva;
+  const minFecha = reserva ? reserva.date : fechaNueva;
 
   return (
     <div className="container mt-5">
@@ -113,7 +118,7 @@ const EditarReserva = () => {
         <div className="card p-4 shadow">
           <h5 className="card-title">Reserva Actual</h5>
           <p>Cancha: {reserva.cancha?.name || "Desconocida"}</p>
-          <p>Fecha: {new Date(reserva.date).toLocaleDateString("es-ES")}</p>
+          <p>Fecha: {reserva.date}</p>
           <p>Horario: {reserva.startTime} a {reserva.endTime}</p>
 
           <h5 className="mt-4">Selecciona un nuevo turno</h5>
@@ -140,7 +145,7 @@ const EditarReserva = () => {
           <input
             type="date"
             value={fechaNueva}
-            min={minFecha} // Fecha mínima igual a la fecha de la reserva actual
+            min={minFecha}
             onChange={(e) => {
               setFechaNueva(e.target.value);
               fetchTurnosLibres(e.target.value, reserva.cancha._id);
