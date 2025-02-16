@@ -1,0 +1,63 @@
+body.cancelturno {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding: 0;
+}
+
+.cancelturno h1 {
+  text-align: center;
+  color: #333;
+  margin-top: 20px;
+}
+
+.cancelturno ul {
+  list-style: none;
+  padding: 0;
+}
+
+.cancelturno li {
+  background: #fff;
+  margin: 10px auto;
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+}
+
+.cancelturno h2 {
+  margin: 0 0 10px;
+  color: #333;
+}
+
+.cancelturno p {
+  margin: 5px 0;
+  color: #666;
+}
+
+.cancelturno button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-right: 10px;
+}
+
+.cancelturno button:hover {
+  background-color: #0056b3;
+}
+
+.cancelturno button:focus {
+  outline: none;
+}
+
+.cancelturno button.cancel {
+  background-color: #dc3545;
+}
+
+.cancelturno button.cancel:hover {
+  background-color: #c82333;
+}
