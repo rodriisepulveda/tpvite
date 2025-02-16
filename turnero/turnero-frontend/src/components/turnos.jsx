@@ -78,22 +78,48 @@ const Turnos = () => {
       navigate('/login');
       return;
     }
-
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `Deseas reservar el turno de ${startTime} a ${endTime} en ${canchaName} a nombre de: ${user?.username}`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, reservar',
-      cancelButtonText: 'Cancelar',
-    });
-
-    if (!result.isConfirmed) return;
-
+  
     try {
+      // Verificar si el usuario ya tiene una reserva en esta cancha
+      const reservasExistentes = await axios.get(`http://localhost:5000/api/turnos/misreservas`, {
+        headers: { 'x-auth-token': token },
+      });
+  
+      const reservaEnMismaCancha = reservasExistentes.data.find(
+        (reserva) => reserva.cancha._id === canchaId
+      );
+  
+      if (reservaEnMismaCancha) {
+        const result = await Swal.fire({
+          title: 'Ya tienes una reserva en esta cancha',
+          text: '¿Deseas reservar de todos modos?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Sí, reservar',
+          cancelButtonText: 'Cancelar',
+        });
+  
+        if (!result.isConfirmed) return;
+      }
+  
+      // Proceso de reserva normal
+      const result = await Swal.fire({
+        title: '¿Estás seguro?',
+        text: `Deseas reservar el turno de ${startTime} a ${endTime} en ${canchaName} a nombre de: ${user?.username}`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, reservar',
+        cancelButtonText: 'Cancelar',
+      });
+  
+      if (!result.isConfirmed) return;
+  
       setLoading(true);
+  
       await axios.post(
         `http://localhost:5000/api/turnos`,
         {
@@ -106,9 +132,9 @@ const Turnos = () => {
         },
         { headers: { 'x-auth-token': token } }
       );
-
+  
       toast.success('Turno reservado correctamente.');
-      fetchCanchas(); // Refrescar la lista de canchas y horarios
+      fetchCanchas();
     } catch (err) {
       console.error('Error al reservar el turno:', err.response?.data?.msg || err.message);
       toast.error(err.response?.data?.msg || 'Error al reservar el turno. Intenta nuevamente.');
@@ -116,6 +142,7 @@ const Turnos = () => {
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="container mt-5">
