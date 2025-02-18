@@ -20,10 +20,6 @@ const Login = () => {
       const res = await axios.post('http://localhost:5000/api/auth/login', { username, password });
       const { token, user } = res.data;
   
-      console.log('Login Response:');
-      console.log('Token:', token);
-      console.log('User:', user);
-  
       if (token && user) {
         login(token, user);
         toast.success(`¡Bienvenido ${user.username}!`);
@@ -41,38 +37,69 @@ const Login = () => {
       setLoading(false);
     }
   };
-  
 
   return (
-    <div className="container mt-5">
-      <div className="row justify-content-center">
-        <div className="col-md-6">
-          <form className="card p-4 shadow" onSubmit={handleSubmit}>
-            <div className="mb-3">
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Username"
-                className="form-control"
-              />
+    <section className="vh-100" style={{ backgroundColor: "#508bfc" }}>
+      <div className="container py-5 h-100">
+        <div className="row d-flex justify-content-center align-items-center h-100">
+          <div className="col-12 col-md-8 col-lg-6 col-xl-5">
+            <div className="card shadow-2-strong" style={{ borderRadius: "1rem" }}>
+              <div className="card-body p-5 text-center">
+                <h3 className="mb-5">Iniciar Sesión</h3>
+                <form onSubmit={handleSubmit}>
+                  
+                  <div className="form-outline mb-4">
+                    <input
+                      type="text"
+                      id="username"
+                      className="form-control form-control-lg"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                    />
+                    <label className="form-label" htmlFor="username">Usuario</label>
+                  </div>
+
+                  <div className="form-outline mb-4">
+                    <input
+                      type="password"
+                      id="password"
+                      className="form-control form-control-lg"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <label className="form-label" htmlFor="password">Contraseña</label>
+                  </div>
+
+                  <div className="form-check d-flex justify-content-start mb-4">
+                    <input className="form-check-input" type="checkbox" id="rememberMe" />
+                    <label className="form-check-label ms-2" htmlFor="rememberMe">
+                      Recordar contraseña
+                    </label>
+                  </div>
+
+                  <button type="submit" className="btn btn-primary btn-lg btn-block w-100" disabled={loading}>
+                    {loading ? 'Iniciando sesión...' : 'Login'}
+                  </button>
+                </form>
+
+                <hr className="my-4" />
+
+                {/* Botones para futuros logins con Google y Facebook */}
+                <button className="btn btn-lg btn-block btn-danger w-100 mb-2" disabled>
+                  <i className="fab fa-google me-2"></i> Iniciar sesión con Google
+                </button>
+                <button className="btn btn-lg btn-block btn-primary w-100" disabled>
+                  <i className="fab fa-facebook-f me-2"></i> Iniciar sesión con Facebook
+                </button>
+
+              </div>
             </div>
-            <div className="mb-3">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="form-control"
-              />
-            </div>
-            <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-              {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
-            </button>
-          </form>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 
