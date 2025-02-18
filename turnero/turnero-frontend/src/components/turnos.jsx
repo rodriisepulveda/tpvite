@@ -25,6 +25,13 @@ const Turnos = () => {
     return `${year}-${month}-${day}`;
   }
 
+  const getCurrentTime = () => {
+    const now = new Date();
+    const offset = -3;
+    now.setMinutes(now.getMinutes() + now.getTimezoneOffset() + offset * 60);
+    return now.toTimeString().slice(0, 5); // Devuelve "HH:MM"
+  };
+
   const formatDateToLocale = (dateString) => {
     const date = new Date(`${dateString}T00:00:00-03:00`);
     return date.toLocaleDateString('es-ES');
@@ -44,12 +51,21 @@ const Turnos = () => {
         headers: { 'x-auth-token': token },
       });
 
+      const currentTime = getCurrentTime();
+      const today = getTodayGMT3();
+
       const horariosLibresPromises = res.data.map(async (cancha) => {
         const horariosRes = await axios.get(`http://localhost:5000/api/turnos/libres`, {
           params: { date: selectedDate, cancha: cancha._id },
           headers: { 'x-auth-token': token },
         });
-        return { ...cancha, horariosLibres: horariosRes.data }; // Solo trae horarios libres desde Turno
+
+        // **🔹 Filtrar horarios pasados solo si la fecha seleccionada es hoy**
+        const horariosFiltrados = horariosRes.data.filter((horario) => {
+          return selectedDate !== today || horario.startTime > currentTime;
+        });
+
+        return { ...cancha, horariosLibres: horariosFiltrados };
       });
 
       const canchasConHorariosLibres = await Promise.all(horariosLibresPromises);
@@ -141,41 +157,57 @@ const Turnos = () => {
           </div>
         </div>
       ) : (
-        canchas.map((cancha) => (
-          <div
-            key={cancha._id}
-            className={`card mb-3 shadow ${selectedCancha === cancha._id ? 'border-primary' : ''}`}
-            onClick={() => handleCanchaClick(cancha._id)}
-          >
-            <div className="card-body">
-              <h2 className="card-title">{cancha.name}</h2>
-              <p className="card-text">Precio: {cancha.precio}</p>
-              {selectedCancha === cancha._id && (
-                <div className="mt-3">
-                  <h3>Horarios disponibles para {formatDateToLocale(selectedDate)}</h3>
-                  <div className="d-flex flex-wrap">
-                    {cancha.horariosLibres.map((horario) => (
-                      <div key={horario._id} className="card m-2 p-2">
-                        <p className="card-text">
-                          {horario.startTime} a {horario.endTime}
+        <>
+          {canchas.length > 0 ? (
+            canchas.map((cancha) => (
+              <div
+                key={cancha._id}
+                className={`card mb-3 shadow ${selectedCancha === cancha._id ? 'border-primary' : ''}`}
+                onClick={() => handleCanchaClick(cancha._id)}
+              >
+                <div className="card-body">
+                  <h2 className="card-title">{cancha.name}</h2>
+                  <p className="card-text">Precio: {cancha.precio}</p>
+                  {selectedCancha === cancha._id && (
+                    <div className="mt-3">
+                      {cancha.horariosLibres.length > 0 ? (
+                        <>
+                          <h3>Horarios disponibles para {formatDateToLocale(selectedDate)}</h3>
+                          <div className="d-flex flex-wrap">
+                            {cancha.horariosLibres.map((horario) => (
+                              <div key={horario._id} className="card m-2 p-2">
+                                <p className="card-text">
+                                  {horario.startTime} a {horario.endTime}
+                                </p>
+                                <button
+                                  className="btn btn-success"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleReserve(cancha._id, horario._id, cancha.name, horario.startTime, horario.endTime);
+                                  }}
+                                >
+                                  Reservar
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-danger text-center mt-3">
+                          Ya no hay turnos disponibles para este día, intenta reservar para otro día.
                         </p>
-                        <button
-                          className="btn btn-success"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleReserve(cancha._id, horario._id, cancha.name, horario.startTime, horario.endTime);
-                          }}
-                        >
-                          Reservar
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        ))
+              </div>
+            ))
+          ) : (
+            <p className="text-danger text-center mt-3">
+              No hay canchas disponibles en este momento.
+            </p>
+          )}
+        </>
       )}
     </div>
   );

@@ -39,15 +39,11 @@ const MisReservas = () => {
   }, [navigate]);
 
   const ajustarFecha = (dateString) => {
-    const date = new Date(dateString);
-    return `${date.getUTCDate()}/${date.getUTCMonth() + 1}/${date.getUTCFullYear()}`;
+    return dateString.split('T')[0]; // Extrae solo la fecha exacta sin cambios de zona horaria
   };
 
-  const ajustarHora = (dateString) => {
-    const date = new Date(dateString);
-    const hours = String(date.getUTCHours()).padStart(2, '0');
-    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+  const obtenerHoraDesdeDB = (dateString) => {
+    return dateString.slice(11, 16); // Extrae HH:MM directamente del string ISO sin modificarlo
   };
 
   const handleCancel = async (turnoId) => {
@@ -66,7 +62,7 @@ const MisReservas = () => {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await axios.put(`http://localhost:5000/api/turnos/${turnoId}/cancel`, {}, {
+      await axios.put(`http://localhost:5000/api/turnos/${turnoId}/cancel`, {}, {
         headers: { 'x-auth-token': token },
       });
 
@@ -87,15 +83,26 @@ const MisReservas = () => {
     navigate(`/editar-reserva/${turnoId}`);
   };
 
-  const ahora = new Date();
-  const reservasActivas = reservas.filter((reserva) => reserva.status === "reservado" && new Date(reserva.endTime) > ahora);
+  const ahora = Date.now(); // Hora exacta del sistema local
+
+  const reservasActivas = reservas.filter((reserva) => {
+    const fechaReserva = ajustarFecha(reserva.date);
+    const horaFinReserva = Date.parse(reserva.endTime); // Obtiene la hora exacta en milisegundos
+    return reserva.status === "reservado" && (fechaReserva > ajustarFecha(new Date().toISOString()) || horaFinReserva > ahora);
+  });
+
   const reservasCanceladas = reservas.filter((reserva) => reserva.status === "cancelado");
-  const reservasConcluidas = reservas.filter((reserva) => reserva.status === "reservado" && new Date(reserva.endTime) <= ahora);
+
+  const reservasConcluidas = reservas.filter((reserva) => {
+    const fechaReserva = ajustarFecha(reserva.date);
+    const horaFinReserva = Date.parse(reserva.endTime);
+    return reserva.status === "reservado" && fechaReserva === ajustarFecha(new Date().toISOString()) && horaFinReserva <= ahora;
+  });
 
   return (
     <div className="container mt-5">
       <h1 className="text-center mb-4">Mis Reservas</h1>
-      
+
       {loading ? (
         <div className="text-center">
           <div className="spinner-border text-primary" role="status">
@@ -107,35 +114,18 @@ const MisReservas = () => {
           {/* Reservas Activas */}
           <h3>Reservas Activas</h3>
           {reservasActivas.length > 0 ? (
-            reservasActivas.map((reserva) => {
-              const canchaName = reserva.cancha?.name || 'Cancha desconocida';
-              const fechaReserva = ajustarFecha(reserva.date);
-              const horaInicio = ajustarHora(reserva.startTime);
-              const horaFin = ajustarHora(reserva.endTime);
-              const descripcion = reserva.description || 'Sin descripción';
-
-              return (
-                <div key={reserva._id} className="card mb-3 shadow">
-                  <div className="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                      <h5 className="card-title">{canchaName}</h5>
-                      <p className="card-text">
-                        Fecha: {fechaReserva} - Horario: {horaInicio} a {horaFin}
-                      </p>
-                      <p className="card-text">{descripcion}</p>
-                    </div>
-                    <div>
-                      <button className="btn btn-outline-danger me-2" onClick={() => handleCancel(reserva._id)}>
-                        ❌ Cancelar
-                      </button>
-                      <button className="btn btn-outline-primary" onClick={() => handleEdit(reserva._id)}>
-                        ✏️ Editar
-                      </button>
-                    </div>
-                  </div>
+            reservasActivas.map((reserva) => (
+              <div key={reserva._id} className="card mb-3 shadow">
+                <div className="card-body">
+                  <h5 className="card-title">{reserva.cancha?.name || 'Cancha desconocida'}</h5>
+                  <p className="card-text">
+                    Fecha: {ajustarFecha(reserva.date)} - Horario: {obtenerHoraDesdeDB(reserva.startTime)} a {obtenerHoraDesdeDB(reserva.endTime)}
+                  </p>
+                  <button className="btn btn-outline-danger me-2" onClick={() => handleCancel(reserva._id)}>❌ Cancelar</button>
+                  <button className="btn btn-outline-primary" onClick={() => handleEdit(reserva._id)}>✏️ Editar</button>
                 </div>
-              );
-            })
+              </div>
+            ))
           ) : (
             <p className="text-center">No tienes reservas activas.</p>
           )}
@@ -146,17 +136,12 @@ const MisReservas = () => {
               <h3 className="mt-4 text-danger">Reservas Canceladas</h3>
               {reservasCanceladas.map((reserva) => (
                 <div key={reserva._id} className="card mb-3 shadow bg-light">
-                  <div className="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                      <h5 className="card-title text-muted">{reserva.cancha?.name}</h5>
-                      <p className="card-text text-muted">
-                        Fecha: {ajustarFecha(reserva.date)} - Horario: {ajustarHora(reserva.startTime)} a {ajustarHora(reserva.endTime)}
-                      </p>
-                      <p className="card-text text-muted">Cancelado por el usuario</p>
-                    </div>
-                    <div>
-                      <span className="badge bg-danger">Cancelado</span>
-                    </div>
+                  <div className="card-body">
+                    <h5 className="card-title text-muted">{reserva.cancha?.name}</h5>
+                    <p className="card-text text-muted">
+                      Fecha: {ajustarFecha(reserva.date)} - Horario: {obtenerHoraDesdeDB(reserva.startTime)} a {obtenerHoraDesdeDB(reserva.endTime)}
+                    </p>
+                    <p className="card-text text-muted">Cancelado por el usuario</p>
                   </div>
                 </div>
               ))}
@@ -169,17 +154,12 @@ const MisReservas = () => {
               <h3 className="mt-4 text-success">Reservas Concluidas</h3>
               {reservasConcluidas.map((reserva) => (
                 <div key={reserva._id} className="card mb-3 shadow bg-light">
-                  <div className="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                      <h5 className="card-title text-muted">{reserva.cancha?.name}</h5>
-                      <p className="card-text text-muted">
-                        Fecha: {ajustarFecha(reserva.date)} - Horario: {ajustarHora(reserva.startTime)} a {ajustarHora(reserva.endTime)}
-                      </p>
-                      <p className="card-text text-muted">Turno concluido</p>
-                    </div>
-                    <div>
-                      <span className="badge bg-success">Concluido</span>
-                    </div>
+                  <div className="card-body">
+                    <h5 className="card-title text-muted">{reserva.cancha?.name}</h5>
+                    <p className="card-text text-muted">
+                      Fecha: {ajustarFecha(reserva.date)} - Horario: {obtenerHoraDesdeDB(reserva.startTime)} a {obtenerHoraDesdeDB(reserva.endTime)}
+                    </p>
+                    <p className="card-text text-muted">Turno concluido</p>
                   </div>
                 </div>
               ))}
