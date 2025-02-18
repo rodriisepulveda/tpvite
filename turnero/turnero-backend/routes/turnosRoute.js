@@ -32,6 +32,7 @@ router.get("/libres", auth, turnoController.getHorariosLibres);
 router.put("/:id", auth, turnoController.updateTurno);
 
 // Ruta para eliminar un turno
-router.delete("/:id", auth, turnoController.deleteTurno);
+router.put("/:id/cancel", auth, turnoController.cancelTurno);
+
 
 module.exports = router;

@@ -36,6 +36,14 @@ const Navbar = () => {
                     Mis Reservas
                   </a>
                 </li>
+                {/* Mostrar el Dashboard solo si el usuario es administrador */}
+                {user?.role === "admin" && (
+                  <li className="nav-item">
+                    <a href="/admin-dashboard" onClick={(e) => { e.preventDefault(); navigate('/admin-dashboard'); }} className="nav-link">
+                      Dashboard
+                    </a>
+                  </li>
+                )}
                 <li className="nav-item">
                   <button onClick={handleLogout} className="btn btn-outline-light">
                     Cerrar sesión
