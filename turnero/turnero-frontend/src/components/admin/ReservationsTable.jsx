@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { FaFileExcel, FaCheckCircle, FaTimesCircle, FaSearch } from 'react-icons/fa';
+import { FaFileExcel, FaCheckCircle, FaTimesCircle, FaSearch, FaClock } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 
 const ReservationsTable = () => {
@@ -28,7 +28,16 @@ const ReservationsTable = () => {
         headers: { 'x-auth-token': token },
         params: filters,
       });
-      setReservas(res.data);
+
+      // **🔹 Ordenar para que "Reservado" siempre aparezca primero**
+      const reservasOrdenadas = res.data.sort((a, b) => {
+        if (a.status === "reservado" && b.status !== "reservado") return -1;
+        if (a.status === "cancelado" && b.status !== "cancelado") return 1;
+        if (a.status === "concluido" && b.status !== "concluido") return 1;
+        return 0;
+      });
+
+      setReservas(reservasOrdenadas);
     } catch (err) {
       console.error('❌ Error al obtener las reservas:', err.response?.data || err.message);
       toast.error('Error al obtener las reservas.');
@@ -87,6 +96,7 @@ const ReservationsTable = () => {
             <option value="">Todos</option>
             <option value="reservado">Reservado</option>
             <option value="cancelado">Cancelado</option>
+            <option value="concluido">Concluido</option>
           </select>
         </div>
         <div className="col-md-4">
@@ -145,8 +155,13 @@ const ReservationsTable = () => {
                       <td>{startTime} - {endTime}</td>
                       <td>{cancha}</td>
                       <td>
-                        <span className={`badge ${estado === 'cancelado' ? 'bg-danger' : 'bg-success'}`} title={`Reserva creada el ${fecha}`}>
-                          {estado === "cancelado" ? <FaTimesCircle /> : <FaCheckCircle />} {estado.charAt(0).toUpperCase() + estado.slice(1)}
+                        <span className={`badge 
+                          ${estado === 'cancelado' ? 'bg-danger' : estado === 'concluido' ? 'bg-secondary' : 'bg-success'}`} 
+                          title={`Reserva creada el ${fecha}`}
+                        >
+                          {estado === "cancelado" ? <FaTimesCircle /> 
+                            : estado === "concluido" ? <FaClock /> 
+                            : <FaCheckCircle />} {estado.charAt(0).toUpperCase() + estado.slice(1)}
                         </span>
                       </td>
                     </tr>

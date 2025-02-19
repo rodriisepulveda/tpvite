@@ -56,11 +56,11 @@ const UsersList = () => {
     };
 
     // 🔎 Filtrar usuarios según el término de búsqueda (por nombre o email)
-    const usuariosFiltrados = usuarios.filter(
-        (usuario) =>
-            usuario.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            usuario.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const usuariosFiltrados = usuarios.filter((usuario) => {
+        const nombre = usuario.username?.toLowerCase() || ''; // Evita error si es undefined
+        const email = usuario.email?.toLowerCase() || ''; // Evita error si es undefined
+        return nombre.includes(searchTerm.toLowerCase()) || email.includes(searchTerm.toLowerCase());
+    });
 
     // 📌 Paginación: mostrar solo los usuarios correspondientes a la página actual
     const usuariosPaginados = usuariosFiltrados.slice(
@@ -103,7 +103,7 @@ const UsersList = () => {
                             {usuariosPaginados.length > 0 ? (
                                 usuariosPaginados.map((usuario) => (
                                     <tr key={usuario._id}>
-                                        <td>{usuario.username}</td>
+                                        <td>{usuario.username || 'Desconocido'}</td>
                                         <td>{usuario.email || 'Sin Email'}</td>
                                         <td>{usuario.role}</td>
                                         <td>
@@ -123,7 +123,7 @@ const UsersList = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="5" className="text-center">No hay usuarios registrados.</td>
+                                    <td colSpan="5" className="text-center text-danger">No hay usuarios registrados.</td>
                                 </tr>
                             )}
                         </tbody>

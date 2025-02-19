@@ -38,7 +38,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="container mt-5">
-      <h1 className="text-center mb-4">Dashboard del Administrador</h1>
+      <h1 className="text-center mb-4">Panel de Administración</h1>
       {loading ? (
         <div className="text-center">
           <div className="spinner-border text-primary" role="status">
