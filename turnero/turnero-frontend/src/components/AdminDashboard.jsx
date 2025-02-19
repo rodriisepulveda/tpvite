@@ -5,6 +5,7 @@ import ReservationsTable from '../components/admin/ReservationsTable';
 import UsersList from '../components/admin/UsersList';
 import { toast } from 'react-toastify';
 import { FaCalendarAlt, FaFutbol, FaUser, FaBan } from 'react-icons/fa';
+import '../components/styles/statisticsCard.css'; // Asegúrate de importar los estilos aquí
 
 const AdminDashboard = () => {
   const [estadisticas, setEstadisticas] = useState(null);
@@ -26,7 +27,7 @@ const AdminDashboard = () => {
         });
         setEstadisticas(res.data);
       } catch (err) {
-        console.error('Error al obtener las estadísticas:', err);
+        console.error('❌ Error al obtener las estadísticas:', err);
         toast.error('Error al obtener las estadísticas.');
       } finally {
         setLoading(false);
@@ -37,55 +38,51 @@ const AdminDashboard = () => {
   }, []);
 
   return (
-    <div className="container mt-5">
-      <h1 className="text-center mb-4">Panel de Administración</h1>
+    <div className="container mt-4">
+      <h1 className="text-center mb-4 fw-bold">Panel de Administración</h1>
+
       {loading ? (
-        <div className="text-center">
+        <div className="d-flex justify-content-center mt-5">
           <div className="spinner-border text-primary" role="status">
-            <span className="sr-only">Cargando...</span>
+            <span className="visually-hidden">Cargando...</span>
           </div>
         </div>
       ) : estadisticas ? (
         <>
-          <div className="row">
-            <div className="col-md-3">
-              <StatisticsCard 
-                title="Reservas activas" 
-                value={estadisticas.totalReservas || 0} 
-                icon={<FaCalendarAlt />} 
-                bgColor="bg-primary" 
-              />
-            </div>
-            <div className="col-md-3">
-              <StatisticsCard 
-                title="Reservas Canceladas" 
-                value={estadisticas.totalCanceladas || 0} 
-                icon={<FaBan />} 
-                bgColor="bg-danger" 
-              />
-            </div>
-            <div className="col-md-3">
-              <StatisticsCard 
-                title="Cancha más Reservada" 
-                value={estadisticas.canchaMasReservada || "N/A"} 
-                icon={<FaFutbol />} 
-                bgColor="bg-success" 
-              />
-            </div>
-            <div className="col-md-3">
-              <StatisticsCard 
-                title="Usuario más Activo" 
-                value={estadisticas.usuarioMasActivo || "N/A"} 
-                icon={<FaUser />} 
-                bgColor="bg-warning" 
-              />
-            </div>
+          {/* 📌 Sección de estadísticas */}
+          <div className="statistics-container">
+            <StatisticsCard 
+              title="Reservas Activas" 
+              value={estadisticas.totalReservas || 0} 
+              icon={<FaCalendarAlt />} 
+              bgColor="bg-primary" 
+            />
+            <StatisticsCard 
+              title="Reservas Canceladas" 
+              value={estadisticas.totalCanceladas || 0} 
+              icon={<FaBan />} 
+              bgColor="bg-danger" 
+            />
+            <StatisticsCard 
+              title="Cancha Más Reservada" 
+              value={estadisticas.canchaMasReservada || "N/A"} 
+              icon={<FaFutbol />} 
+              bgColor="bg-success" 
+            />
+            <StatisticsCard 
+              title="Usuario Más Activo" 
+              value={estadisticas.usuarioMasActivo || "N/A"} 
+              icon={<FaUser />} 
+              bgColor="bg-warning" 
+            />
           </div>
+
+          {/* 📌 Sección de Reservas y Usuarios */}
           <ReservationsTable />
           <UsersList />
         </>
       ) : (
-        <p className="text-center text-danger">No se pudieron cargar las estadísticas.</p>
+        <p className="text-center text-danger fw-bold">No se pudieron cargar las estadísticas.</p>
       )}
     </div>
   );

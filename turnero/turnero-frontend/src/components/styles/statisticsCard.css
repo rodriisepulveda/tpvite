@@ -1,0 +1,58 @@
+.statistics-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: space-between; /* 🔹 Distribuye uniformemente */
+    margin-bottom: 20px;
+}
+
+.statistics-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    color: white;
+    font-weight: bold;
+    width: 23%; /* 🔹 Ajusta para que siempre quepan 4 en una fila */
+    min-height: 120px; /* 🔹 Tamaño uniforme */
+    text-align: center;
+}
+
+.statistics-card .icon {
+    font-size: 2rem;
+    opacity: 0.9;
+    margin-left: 10px;
+}
+
+/* 🔹 Colores personalizados */
+.bg-primary {
+    background-color: #3b82f6 !important; /* Azul */
+}
+.bg-danger {
+    background-color: #ef4444 !important; /* Rojo */
+}
+.bg-success {
+    background-color: #22c55e !important; /* Verde */
+}
+.bg-warning {
+    background-color: #facc15 !important; /* Amarillo */
+}
+
+/* 🔹 Responsividad */
+@media (max-width: 992px) {
+    .statistics-card {
+        width: 48%; /* 🔹 2 por fila en pantallas medianas */
+    }
+}
+
+@media (max-width: 600px) {
+    .statistics-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    .statistics-card {
+        width: 100%; /* 🔹 Una por fila en móviles */
+    }
+}
