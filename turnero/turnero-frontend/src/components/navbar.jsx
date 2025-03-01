@@ -1,6 +1,8 @@
-import React, { useContext } from 'react';
-import { AuthContext } from '../context/authcontext.jsx';
-import { useNavigate } from 'react-router-dom';
+import React, { useContext } from "react";
+import { AuthContext } from "../context/authcontext.jsx";
+import { AppBar, Toolbar, Typography, Button, IconButton } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import HomeIcon from "@mui/icons-material/Home";
 
 const Navbar = () => {
   const { isAuthenticated, user, logout } = useContext(AuthContext);
@@ -8,66 +10,37 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
-      <div className="container-fluid">
-        <span className="navbar-text text-light ms-2">
-          {isAuthenticated && user ? `Bienvenido, ${user.username}` : 'Bienvenido, Invitado'}
-        </span>
-        <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav ms-auto">
-            <li className="nav-item">
-              <a href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }} className="nav-link">
-                Inicio
-              </a>
-            </li>
-            {isAuthenticated ? (
-              <>
-                <li className="nav-item">
-                  <a href="/turnos" onClick={(e) => { e.preventDefault(); navigate('/turnos'); }} className="nav-link">
-                    Reservar
-                  </a>
-                </li>
-                <li className="nav-item">
-                  <a href="/misreservas" onClick={(e) => { e.preventDefault(); navigate('/misreservas'); }} className="nav-link">
-                    Mis Reservas
-                  </a>
-                </li>
-                {/* Mostrar el Dashboard solo si el usuario es administrador */}
-                {user?.role === "admin" && (
-                  <li className="nav-item">
-                    <a href="/admin-dashboard" onClick={(e) => { e.preventDefault(); navigate('/admin-dashboard'); }} className="nav-link">
-                      Dashboard
-                    </a>
-                  </li>
-                )}
-                <li className="nav-item">
-                  <button onClick={handleLogout} className="btn btn-outline-light">
-                    Cerrar sesión
-                  </button>
-                </li>
-              </>
-            ) : (
-              <>
-                <li className="nav-item">
-                  <a href="/login" onClick={(e) => { e.preventDefault(); navigate('/login'); }} className="nav-link">
-                    Iniciar sesión
-                  </a>
-                </li>
-                <li className="nav-item">
-                  <a href="/register" onClick={(e) => { e.preventDefault(); navigate('/register'); }} className="nav-link">
-                    Registrarse
-                  </a>
-                </li>
-              </>
+    <AppBar position="static" sx={{ background: "linear-gradient(to right, #1976d2, #673ab7)" }}>
+      <Toolbar>
+        <IconButton edge="start" color="inherit" aria-label="home" onClick={() => navigate("/")}>
+          <HomeIcon />
+        </IconButton>
+        <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          {isAuthenticated && user ? `Bienvenido, ${user.username}` : "Bienvenido, Invitado"}
+        </Typography>
+        {isAuthenticated ? (
+          <>
+            <Button color="inherit" onClick={() => navigate("/turnos")}>Reservar</Button>
+            <Button color="inherit" onClick={() => navigate("/misreservas")}>Mis Reservas</Button>
+            {user?.role === "admin" && (
+              <Button color="inherit" onClick={() => navigate("/admin-dashboard")}>Dashboard</Button>
             )}
-          </ul>
-        </div>
-      </div>
-    </nav>
+            <Button color="error" variant="contained" sx={{ ml: 2 }} onClick={handleLogout}>
+              Cerrar sesión
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button color="inherit" onClick={() => navigate("/login")}>Iniciar sesión</Button>
+            <Button color="inherit" onClick={() => navigate("/register")}>Registrarse</Button>
+          </>
+        )}
+      </Toolbar>
+    </AppBar>
   );
 };
 
