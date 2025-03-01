@@ -5,7 +5,7 @@ import ReservationsTable from '../components/admin/ReservationsTable';
 import UsersList from '../components/admin/UsersList';
 import { toast } from 'react-toastify';
 import { FaCalendarAlt, FaFutbol, FaUser, FaBan, FaCheckCircle } from 'react-icons/fa';
-import '../components/styles/statisticsCard.css'; // Asegúrate de importar los estilos aquí
+import '../components/styles/statisticsCard.css';
 
 const AdminDashboard = () => {
   const [estadisticas, setEstadisticas] = useState(null);
@@ -26,7 +26,6 @@ const AdminDashboard = () => {
           headers: { 'x-auth-token': token },
         });
 
-        // Verificar si totalConcluidas viene correctamente
         if (!res.data.totalConcluidas) {
           res.data.totalConcluidas = 0; // Evita mostrar "undefined"
         }
@@ -89,8 +88,11 @@ const AdminDashboard = () => {
             />
           </div>
 
-          {/* 📌 Sección de Reservas y Usuarios */}
+          {/* 📌 Sección de Reservas */}
+          <h3 className="mt-5">Gestión de Reservas</h3>
           <ReservationsTable />
+
+          {/* 📌 Sección de Usuarios */}
           <UsersList />
         </>
       ) : (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 
 const UsersList = () => {
     const [usuarios, setUsuarios] = useState([]);
@@ -23,7 +24,13 @@ const UsersList = () => {
                 const res = await axios.get('http://localhost:5000/api/admin/usuarios', {
                     headers: { 'x-auth-token': token },
                 });
-                setUsuarios(res.data);
+
+                const usuariosProcesados = res.data.map(user => ({
+                    ...user,
+                    _id: typeof user._id === 'object' && user._id.$oid ? user._id.$oid : user._id
+                }));
+
+                setUsuarios(usuariosProcesados);
             } catch (err) {
                 console.error('❌ Error al obtener los usuarios:', err);
                 toast.error('Error al obtener los usuarios.');
@@ -35,34 +42,88 @@ const UsersList = () => {
         fetchUsuarios();
     }, []);
 
-    const handleBlockUser = async (userId, bloqueado) => {
+    // 🔹 Función para mostrar SweetAlert con mensajes bien conjugados
+    const confirmarCambioEstado = async (estado, username) => {
+        // Mapeo para que el mensaje sea correcto
+        const acciones = {
+            'Habilitado': 'habilitar',
+            'Suspendido': 'suspender',
+            'Deshabilitado': 'deshabilitar'
+        };
+
+        let icono = estado === 'Habilitado' ? 'success' : estado === 'Suspendido' ? 'warning' : 'error';
+        let accion = acciones[estado];
+
+        return Swal.fire({
+            title: `¿Estás seguro de ${accion} a ${username}?`,
+            icon: icono,
+            showCancelButton: true,
+            confirmButtonColor: estado === 'Habilitado' ? '#28a745' : estado === 'Suspendido' ? '#ffc107' : '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: `Sí, ${accion}`,
+            cancelButtonText: 'Cancelar'
+        });
+    };
+
+    // 🔹 Función para actualizar el estado del usuario
+    const handleChangeUserStatus = async (userId, estado, username) => {
+        const result = await confirmarCambioEstado(estado, username);
+        if (!result.isConfirmed) return;
+
+        let suspensionHasta = null;
+
+        if (estado === 'Suspendido') {
+            const { value: tiempo } = await Swal.fire({
+                title: 'Selecciona la duración de la suspensión',
+                input: 'select',
+                inputOptions: {
+                    '3': '3 días',
+                    '7': '1 semana',
+                    '14': '2 semanas',
+                    '30': '1 mes',
+                },
+                inputPlaceholder: 'Duración de la suspensión',
+                showCancelButton: true,
+                confirmButtonText: 'Confirmar',
+            });
+
+            if (!tiempo) return;
+
+            const fechaSuspension = new Date();
+            fechaSuspension.setDate(fechaSuspension.getDate() + parseInt(tiempo));
+            suspensionHasta = fechaSuspension.toISOString();
+        }
+
         try {
+            const token = localStorage.getItem('token');
+
             await axios.put(
-                `http://localhost:5000/api/admin/usuarios/${userId}/bloquear`,
-                { bloqueado: !bloqueado },
-                { headers: { 'x-auth-token': localStorage.getItem('token') } }
+                `http://localhost:5000/api/admin/usuarios/${userId}/estado`,
+                { estado, suspensionHasta },
+                { headers: { 'x-auth-token': token } }
             );
 
-            toast.success(`Usuario ${!bloqueado ? 'bloqueado' : 'desbloqueado'} correctamente.`);
+            toast.success(`Usuario ${username} ahora está ${estado}.`);
+
             setUsuarios((prevUsuarios) =>
-                prevUsuarios.map((usuario) =>
-                    usuario._id === userId ? { ...usuario, bloqueado: !bloqueado } : usuario
+                prevUsuarios.map((user) =>
+                    user._id === userId ? { ...user, estado, suspensionHasta } : user
                 )
             );
         } catch (err) {
-            console.error('❌ Error al bloquear/desbloquear usuario:', err);
-            toast.error('Error al bloquear/desbloquear usuario.');
+            console.error('❌ Error al actualizar el estado del usuario:', err);
+            toast.error('Error al actualizar el estado del usuario.');
         }
     };
 
-    // 🔎 Filtrar usuarios según el término de búsqueda (por nombre o email)
+    // 🔎 Filtrar usuarios según el término de búsqueda
     const usuariosFiltrados = usuarios.filter((usuario) => {
-        const nombre = usuario.username?.toLowerCase() || ''; // Evita error si es undefined
-        const email = usuario.email?.toLowerCase() || ''; // Evita error si es undefined
+        const nombre = usuario.username?.toLowerCase() || '';
+        const email = usuario.email?.toLowerCase() || '';
         return nombre.includes(searchTerm.toLowerCase()) || email.includes(searchTerm.toLowerCase());
     });
 
-    // 📌 Paginación: mostrar solo los usuarios correspondientes a la página actual
+    // 📌 Paginación
     const usuariosPaginados = usuariosFiltrados.slice(
         (currentPage - 1) * usuariosPorPagina,
         currentPage * usuariosPorPagina
@@ -88,7 +149,7 @@ const UsersList = () => {
                     </div>
                 </div>
             ) : (
-                <div style={{ maxHeight: '400px', overflowY: 'auto' }}> {/* 📌 SCROLL INTERNO */}
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                     <table className="table table-striped">
                         <thead>
                             <tr>
@@ -107,17 +168,26 @@ const UsersList = () => {
                                         <td>{usuario.email || 'Sin Email'}</td>
                                         <td>{usuario.role}</td>
                                         <td>
-                                            <span className={`badge ${usuario.bloqueado ? 'bg-danger' : 'bg-success'}`}>
-                                                {usuario.bloqueado ? 'Bloqueado' : 'Activo'}
+                                            <span className={`badge bg-${usuario.estado === 'Habilitado' ? 'success' : usuario.estado === 'Deshabilitado' ? 'danger' : 'warning'}`}>
+                                                {usuario.estado} {usuario.suspensionHasta ? ` (Hasta ${new Date(usuario.suspensionHasta).toLocaleDateString()})` : ''}
                                             </span>
                                         </td>
                                         <td>
-                                            <button
-                                                className={`btn btn-${usuario.bloqueado ? 'success' : 'danger'} btn-sm`}
-                                                onClick={() => handleBlockUser(usuario._id, usuario.bloqueado)}
-                                            >
-                                                {usuario.bloqueado ? 'Desbloquear' : 'Bloquear'}
-                                            </button>
+                                            {usuario.estado !== 'Habilitado' && (
+                                                <button className="btn btn-sm btn-success me-2" onClick={() => handleChangeUserStatus(usuario._id, 'Habilitado', usuario.username)}>
+                                                    HABILITAR
+                                                </button>
+                                            )}
+                                            {usuario.estado !== 'Suspendido' && (
+                                                <button className="btn btn-sm btn-warning me-2" onClick={() => handleChangeUserStatus(usuario._id, 'Suspendido', usuario.username)}>
+                                                    SUSPENDER
+                                                </button>
+                                            )}
+                                            {usuario.estado !== 'Deshabilitado' && (
+                                                <button className="btn btn-sm btn-danger" onClick={() => handleChangeUserStatus(usuario._id, 'Deshabilitado', usuario.username)}>
+                                                    DESHABILITAR
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))
@@ -130,25 +200,6 @@ const UsersList = () => {
                     </table>
                 </div>
             )}
-
-            {/* 📌 Paginación */}
-            <div className="d-flex justify-content-between mt-3">
-                <button
-                    className="btn btn-outline-primary"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                >
-                    ⬅ Anterior
-                </button>
-                <span className="align-self-center">Página {currentPage}</span>
-                <button
-                    className="btn btn-outline-primary"
-                    disabled={currentPage * usuariosPorPagina >= usuariosFiltrados.length}
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                >
-                    Siguiente ➡
-                </button>
-            </div>
         </div>
     );
 };
