@@ -10,52 +10,44 @@ const getEstadisticas = async (req, res) => {
         const totalCanceladas = await Turno.countDocuments({ status: "cancelado" });
         const totalConcluidas = await Turno.countDocuments({ status: "concluido" });
 
-        // Cancha más reservada
+        // Cancha más reservada (Incluye "reservado" y "concluido")
         const canchaMasReservada = await Turno.aggregate([
-            { $match: { status: "reservado" } },
+            { $match: { status: { $in: ["reservado", "concluido"] } } }, // Incluye turnos finalizados
             { $group: { _id: "$cancha", total: { $sum: 1 } } },
             { $sort: { total: -1 } },
-            { $limit: 1 },
-            { 
-                $lookup: {
-                    from: "canchas",
-                    localField: "_id",
-                    foreignField: "_id",
-                    as: "canchaInfo"
-                }
-            },
-            { $unwind: { path: "$canchaInfo", preserveNullAndEmptyArrays: true } }
+            { $limit: 1 }
         ]);
 
-        // Usuario más activo
+        const canchaInfo = canchaMasReservada.length > 0 
+            ? await Cancha.findById(canchaMasReservada[0]._id).select("name") 
+            : { name: "N/A" };
+
+        // Usuario más activo (Incluye "reservado" y "concluido")
         const usuarioMasActivo = await Turno.aggregate([
-            { $match: { status: "reservado" } },
+            { $match: { status: { $in: ["reservado", "concluido"] } } }, // Incluye turnos finalizados
             { $group: { _id: "$user", total: { $sum: 1 } } },
             { $sort: { total: -1 } },
-            { $limit: 1 },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "_id",
-                    foreignField: "_id",
-                    as: "userInfo"
-                }
-            },
-            { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } }
+            { $limit: 1 }
         ]);
+
+        const usuarioInfo = usuarioMasActivo.length > 0 
+            ? await User.findById(usuarioMasActivo[0]._id).select("username") 
+            : { username: "N/A" };
 
         res.json({
             totalReservas,
             totalCanceladas,
             totalConcluidas,
-            canchaMasReservada: canchaMasReservada.length > 0 ? canchaMasReservada[0].canchaInfo?.name || "N/A" : "N/A",
-            usuarioMasActivo: usuarioMasActivo.length > 0 ? usuarioMasActivo[0].userInfo?.username || "N/A" : "N/A"
+            canchaMasReservada: canchaInfo.name,
+            usuarioMasActivo: usuarioInfo.username
         });
     } catch (err) {
         console.error("❌ Error en getEstadisticas:", err);
         res.status(500).json({ msg: "Error al obtener estadísticas." });
     }
 };
+
+
 
 // Obtener lista de usuarios con estado y suspensión
 const getUsuarios = async (req, res) => {

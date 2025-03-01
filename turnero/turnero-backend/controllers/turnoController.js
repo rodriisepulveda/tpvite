@@ -9,6 +9,25 @@ const getTurnoDateTime = (date, time) => {
   return turnoDate;
 };
 
+// 🔹 Función para actualizar los horarios de la cancha cuando un turno cambia de estado
+const actualizarHorariosCancha = async (canchaId, startTime, endTime, usuario = null) => {
+  try {
+    const cancha = await Cancha.findById(canchaId);
+    if (!cancha) return;
+
+    const horario = cancha.horarios.find(
+      (h) => h.startTime === startTime && h.endTime === endTime
+    );
+
+    if (horario) {
+      horario.usuario = usuario;
+      await cancha.save({ validateModifiedOnly: true });
+    }
+  } catch (err) {
+    console.error("Error actualizando horarios de cancha:", err);
+  }
+};
+
 // Crear un nuevo turno (establece estado en "reservado")
 const createTurno = async (req, res, next) => {
   const { date, startTime, endTime, title, description, cancha } = req.body;
@@ -42,6 +61,8 @@ const createTurno = async (req, res, next) => {
     });
 
     const turno = await newTurno.save();
+    await actualizarHorariosCancha(cancha, startTime, endTime, req.user.id);
+
     res.status(201).json(turno);
   } catch (err) {
     console.error("Error en createTurno:", err);
@@ -49,28 +70,10 @@ const createTurno = async (req, res, next) => {
   }
 };
 
-// 🔹 Función para actualizar turnos vencidos a "concluido"
-const updateTurnosConcluidos = async () => {
-  try {
-    const ahora = new Date();
-
-    const turnosActualizados = await Turno.updateMany(
-      { status: "reservado", endTime: { $lt: ahora } }, 
-      { $set: { status: "concluido" } }
-    );
-
-    if (turnosActualizados.modifiedCount > 0) {
-      console.log(`✅ ${turnosActualizados.modifiedCount} turnos actualizados a 'concluido'.`);
-    }
-  } catch (err) {
-    console.error("❌ Error al actualizar turnos concluidos:", err);
-  }
-};
-
-// Obtener horarios libres de una cancha (excluye "reservado" y "cancelado")
+// 🔹 Obtener horarios libres de una cancha
 const getHorariosLibres = async (req, res, next) => {
   try {
-    await updateTurnosConcluidos(); // Asegurar que los turnos estén actualizados
+    await updateTurnosConcluidos();
     const { date, cancha } = req.query;
 
     if (!date || !cancha) {
@@ -110,10 +113,10 @@ const getHorariosLibres = async (req, res, next) => {
   }
 };
 
-// Obtener reservas del usuario autenticado
+// 🔹 Obtener reservas del usuario autenticado
 const getMyTurnos = async (req, res, next) => {
   try {
-    await updateTurnosConcluidos(); // Asegurar que los turnos estén actualizados
+    await updateTurnosConcluidos();
     const turnos = await Turno.find({ user: req.user.id }).populate("cancha", "name description location");
     res.json(turnos);
   } catch (err) {
@@ -122,7 +125,7 @@ const getMyTurnos = async (req, res, next) => {
   }
 };
 
-// Obtener un turno por ID
+// 🔹 Obtener un turno por ID
 const getTurnoById = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -137,7 +140,7 @@ const getTurnoById = async (req, res, next) => {
   }
 };
 
-// Actualizar un turno
+// 🔹 Actualizar un turno
 const updateTurno = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -164,7 +167,25 @@ const updateTurno = async (req, res, next) => {
   }
 };
 
-// Cancelar un turno (cambia estado a "cancelado")
+// 🔹 Actualizar turnos vencidos a "concluido"
+const updateTurnosConcluidos = async () => {
+  try {
+    const ahora = new Date();
+    const turnosVencidos = await Turno.find({ status: "reservado", endTime: { $lt: ahora } });
+
+    for (const turno of turnosVencidos) {
+      turno.status = "concluido";
+      await turno.save();
+      await actualizarHorariosCancha(turno.cancha, turno.startTime, turno.endTime);
+    }
+
+    console.log(`✅ ${turnosVencidos.length} turnos actualizados a 'concluido'.`);
+  } catch (err) {
+    console.error("❌ Error al actualizar turnos concluidos:", err);
+  }
+};
+
+// 🔹 Cancelar un turno (cambia estado a "cancelado")
 const cancelTurno = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -180,12 +201,19 @@ const cancelTurno = async (req, res, next) => {
     turno.status = "cancelado";
     await turno.save();
 
-    res.json({ msg: "Turno cancelado correctamente", turno });
+    // ✅ Si la hora de inicio aún no pasó, liberar el horario en la cancha
+    const ahora = new Date();
+    if (turno.startTime > ahora) {
+      await actualizarHorariosCancha(turno.cancha, turno.startTime, turno.endTime, null);
+    }
+
+    res.json({ msg: "Turno cancelado correctamente y horario liberado", turno });
   } catch (err) {
     console.error("Error en cancelTurno:", err);
     next(err);
   }
 };
+
 
 module.exports = {
   createTurno,
