@@ -7,6 +7,7 @@ const getEstadisticas = async (req, res) => {
     try {
         const totalReservas = await Turno.countDocuments({ status: "reservado" });
         const totalCanceladas = await Turno.countDocuments({ status: "cancelado" });
+        const totalConcluidas = await Turno.countDocuments({ status: "concluido" }); // 🔹 Se agrega el conteo de concluidas
 
         // Cancha más reservada
         const canchaMasReservada = await Turno.aggregate([
@@ -22,7 +23,7 @@ const getEstadisticas = async (req, res) => {
                     as: "canchaInfo"
                 }
             },
-            { $unwind: "$canchaInfo" }
+            { $unwind: { path: "$canchaInfo", preserveNullAndEmptyArrays: true } }
         ]);
 
         // Usuario más activo
@@ -39,14 +40,15 @@ const getEstadisticas = async (req, res) => {
                     as: "userInfo"
                 }
             },
-            { $unwind: "$userInfo" }
+            { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } }
         ]);
 
         res.json({
             totalReservas,
             totalCanceladas,
-            canchaMasReservada: canchaMasReservada.length > 0 ? canchaMasReservada[0].canchaInfo.name : "N/A",
-            usuarioMasActivo: usuarioMasActivo.length > 0 ? usuarioMasActivo[0].userInfo.username : "N/A"
+            totalConcluidas, // 🔹 Ahora se incluye correctamente en la respuesta
+            canchaMasReservada: canchaMasReservada.length > 0 ? canchaMasReservada[0].canchaInfo?.name || "N/A" : "N/A",
+            usuarioMasActivo: usuarioMasActivo.length > 0 ? usuarioMasActivo[0].userInfo?.username || "N/A" : "N/A"
         });
     } catch (err) {
         console.error("❌ Error en getEstadisticas:", err);

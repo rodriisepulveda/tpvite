@@ -4,9 +4,15 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 
+// Función para formatear fecha sin zona horaria
 const parseDateWithoutTimezone = (dateString) => {
   const [year, month, day] = dateString.split("T")[0].split("-");
   return `${year}-${month}-${day}`;
+};
+
+// Función para formatear horario a HH:mm
+const formatHora = (isoString) => {
+  return isoString.slice(11, 16); // Extrae HH:MM directamente del string ISO
 };
 
 const EditarReserva = () => {
@@ -114,11 +120,11 @@ const EditarReserva = () => {
           </div>
         </div>
       ) : reserva ? (
-        <div className="card p-4 shadow">
-          <h5 className="card-title">Reserva Actual</h5>
-          <p>Cancha: {reserva.cancha?.name || "Desconocida"}</p>
-          <p>Fecha: {reserva.date}</p>
-          <p>Horario: {reserva.startTime} a {reserva.endTime}</p>
+        <div className="card p-4 shadow-lg border-0 rounded">
+          <h5 className="card-title fw-bold text-primary">Reserva Actual</h5>
+          <p><strong>Cancha:</strong> {reserva.cancha?.name || "Desconocida"}</p>
+          <p><strong>Fecha:</strong> {reserva.date}</p>
+          <p><strong>Horario:</strong> {formatHora(reserva.startTime)} a {formatHora(reserva.endTime)}</p>
 
           <h5 className="mt-4">Selecciona un nuevo turno</h5>
           {turnosLibres.length > 0 ? (
@@ -152,7 +158,7 @@ const EditarReserva = () => {
             className="form-control"
           />
 
-          <button className="btn btn-primary mt-4" onClick={handleUpdate} disabled={!selectedTurno}>
+          <button className="btn btn-primary mt-4 w-100" onClick={handleUpdate} disabled={!selectedTurno}>
             Actualizar Reserva
           </button>
         </div>

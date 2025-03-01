@@ -4,7 +4,7 @@ import StatisticsCard from '../components/admin/StatisticsCard';
 import ReservationsTable from '../components/admin/ReservationsTable';
 import UsersList from '../components/admin/UsersList';
 import { toast } from 'react-toastify';
-import { FaCalendarAlt, FaFutbol, FaUser, FaBan } from 'react-icons/fa';
+import { FaCalendarAlt, FaFutbol, FaUser, FaBan, FaCheckCircle } from 'react-icons/fa';
 import '../components/styles/statisticsCard.css'; // Asegúrate de importar los estilos aquí
 
 const AdminDashboard = () => {
@@ -25,6 +25,12 @@ const AdminDashboard = () => {
         const res = await axios.get('http://localhost:5000/api/admin/estadisticas', {
           headers: { 'x-auth-token': token },
         });
+
+        // Verificar si totalConcluidas viene correctamente
+        if (!res.data.totalConcluidas) {
+          res.data.totalConcluidas = 0; // Evita mostrar "undefined"
+        }
+
         setEstadisticas(res.data);
       } catch (err) {
         console.error('❌ Error al obtener las estadísticas:', err);
@@ -49,8 +55,8 @@ const AdminDashboard = () => {
         </div>
       ) : estadisticas ? (
         <>
-          {/* 📌 Sección de estadísticas */}
-          <div className="statistics-container">
+          {/* 📌 Sección de estadísticas con centrado dinámico */}
+          <div className="statistics-container d-flex flex-wrap justify-content-center gap-3">
             <StatisticsCard 
               title="Reservas Activas" 
               value={estadisticas.totalReservas || 0} 
@@ -62,6 +68,12 @@ const AdminDashboard = () => {
               value={estadisticas.totalCanceladas || 0} 
               icon={<FaBan />} 
               bgColor="bg-danger" 
+            />
+            <StatisticsCard 
+              title="Reservas Concluidas" 
+              value={estadisticas.totalConcluidas || 0} 
+              icon={<FaCheckCircle />} 
+              bgColor="bg-secondary" 
             />
             <StatisticsCard 
               title="Cancha Más Reservada" 

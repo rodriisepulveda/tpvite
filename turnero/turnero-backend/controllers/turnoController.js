@@ -49,15 +49,34 @@ const createTurno = async (req, res, next) => {
   }
 };
 
+// 🔹 Función para actualizar turnos vencidos a "concluido"
+const updateTurnosConcluidos = async () => {
+  try {
+    const ahora = new Date();
+
+    const turnosActualizados = await Turno.updateMany(
+      { status: "reservado", endTime: { $lt: ahora } }, 
+      { $set: { status: "concluido" } }
+    );
+
+    if (turnosActualizados.modifiedCount > 0) {
+      console.log(`✅ ${turnosActualizados.modifiedCount} turnos actualizados a 'concluido'.`);
+    }
+  } catch (err) {
+    console.error("❌ Error al actualizar turnos concluidos:", err);
+  }
+};
+
 // Obtener horarios libres de una cancha (excluye "reservado" y "cancelado")
 const getHorariosLibres = async (req, res, next) => {
-  const { date, cancha } = req.query;
-
-  if (!date || !cancha) {
-    return res.status(400).json({ msg: "Faltan parámetros: date y cancha son requeridos" });
-  }
-
   try {
+    await updateTurnosConcluidos(); // Asegurar que los turnos estén actualizados
+    const { date, cancha } = req.query;
+
+    if (!date || !cancha) {
+      return res.status(400).json({ msg: "Faltan parámetros: date y cancha son requeridos" });
+    }
+
     const startOfDay = new Date(`${date}T00:00:00.000Z`);
     const endOfDay = new Date(`${date}T23:59:59.999Z`);
 
@@ -94,6 +113,7 @@ const getHorariosLibres = async (req, res, next) => {
 // Obtener reservas del usuario autenticado
 const getMyTurnos = async (req, res, next) => {
   try {
+    await updateTurnosConcluidos(); // Asegurar que los turnos estén actualizados
     const turnos = await Turno.find({ user: req.user.id }).populate("cancha", "name description location");
     res.json(turnos);
   } catch (err) {
@@ -105,6 +125,7 @@ const getMyTurnos = async (req, res, next) => {
 // Obtener un turno por ID
 const getTurnoById = async (req, res, next) => {
   try {
+    await updateTurnosConcluidos();
     const turno = await Turno.findById(req.params.id).populate("cancha", "name description location");
     if (!turno) {
       return res.status(404).json({ msg: "Turno no encontrado" });
@@ -118,9 +139,10 @@ const getTurnoById = async (req, res, next) => {
 
 // Actualizar un turno
 const updateTurno = async (req, res, next) => {
-  const { date, startTime, endTime, cancha } = req.body;
-
   try {
+    await updateTurnosConcluidos();
+    const { date, startTime, endTime, cancha } = req.body;
+
     const startDateTime = getTurnoDateTime(date, startTime);
     const endDateTime = getTurnoDateTime(date, endTime);
 
@@ -143,9 +165,9 @@ const updateTurno = async (req, res, next) => {
 };
 
 // Cancelar un turno (cambia estado a "cancelado")
-// Cancelar un turno (cambia estado a "cancelado")
 const cancelTurno = async (req, res, next) => {
   try {
+    await updateTurnosConcluidos();
     const turno = await Turno.findById(req.params.id);
     if (!turno) {
       return res.status(404).json({ msg: "Turno no encontrado" });
@@ -165,7 +187,6 @@ const cancelTurno = async (req, res, next) => {
   }
 };
 
-
 module.exports = {
   createTurno,
   getHorariosLibres,
@@ -173,4 +194,5 @@ module.exports = {
   updateTurno,
   cancelTurno,
   getMyTurnos,
+  updateTurnosConcluidos
 };

@@ -38,13 +38,8 @@ const MisReservas = () => {
     fetchReservas();
   }, [navigate]);
 
-  const ajustarFecha = (dateString) => {
-    return dateString.split('T')[0]; // Extrae solo la fecha exacta sin cambios de zona horaria
-  };
-
-  const obtenerHoraDesdeDB = (dateString) => {
-    return dateString.slice(11, 16); // Extrae HH:MM directamente del string ISO sin modificarlo
-  };
+  const ajustarFecha = (dateString) => dateString.split('T')[0];
+  const obtenerHoraDesdeDB = (dateString) => dateString.slice(11, 16);
 
   const handleCancel = async (turnoId) => {
     const token = localStorage.getItem('token');
@@ -62,42 +57,36 @@ const MisReservas = () => {
     if (!result.isConfirmed) return;
 
     try {
-      await axios.put(`http://localhost:5000/api/turnos/${turnoId}/cancel`, {}, {
-        headers: { 'x-auth-token': token },
-      });
-
-      setReservas((prevReservas) =>
-        prevReservas.map((reserva) =>
-          reserva._id === turnoId ? { ...reserva, status: "cancelado" } : reserva
-        )
+      setLoading(true);
+      const res = await axios.put(
+        `http://localhost:5000/api/turnos/${turnoId}/cancel`,
+        {},
+        { headers: { 'x-auth-token': token } }
       );
 
-      toast.success('Reserva cancelada correctamente.');
+      if (res.status === 200) {
+        setReservas((prevReservas) =>
+          prevReservas.map((reserva) =>
+            reserva._id === turnoId ? { ...reserva, status: "cancelado" } : reserva
+          )
+        );
+        toast.success('Reserva cancelada correctamente.');
+      } else {
+        toast.error('No se pudo cancelar la reserva. Intenta nuevamente.');
+      }
     } catch (err) {
       console.error('Error al cancelar la reserva:', err);
-      toast.error('Error al cancelar la reserva.');
+      toast.error('Error al cancelar la reserva. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEdit = (turnoId) => {
-    navigate(`/editar-reserva/${turnoId}`);
-  };
+  const handleEdit = (turnoId) => navigate(`/editar-reserva/${turnoId}`);
 
-  const ahora = Date.now(); // Hora exacta del sistema local
-
-  const reservasActivas = reservas.filter((reserva) => {
-    const fechaReserva = ajustarFecha(reserva.date);
-    const horaFinReserva = Date.parse(reserva.endTime); // Obtiene la hora exacta en milisegundos
-    return reserva.status === "reservado" && (fechaReserva > ajustarFecha(new Date().toISOString()) || horaFinReserva > ahora);
-  });
-
+  const reservasActivas = reservas.filter((reserva) => reserva.status === "reservado");
   const reservasCanceladas = reservas.filter((reserva) => reserva.status === "cancelado");
-
-  const reservasConcluidas = reservas.filter((reserva) => {
-    const fechaReserva = ajustarFecha(reserva.date);
-    const horaFinReserva = Date.parse(reserva.endTime);
-    return reserva.status === "reservado" && fechaReserva === ajustarFecha(new Date().toISOString()) && horaFinReserva <= ahora;
-  });
+  const reservasConcluidas = reservas.filter((reserva) => reserva.status === "concluido");
 
   return (
     <div className="container mt-5">
@@ -111,7 +100,6 @@ const MisReservas = () => {
         </div>
       ) : (
         <>
-          {/* Reservas Activas */}
           <h3>Reservas Activas</h3>
           {reservasActivas.length > 0 ? (
             reservasActivas.map((reserva) => (
@@ -130,7 +118,6 @@ const MisReservas = () => {
             <p className="text-center">No tienes reservas activas.</p>
           )}
 
-          {/* Reservas Canceladas */}
           {reservasCanceladas.length > 0 && (
             <>
               <h3 className="mt-4 text-danger">Reservas Canceladas</h3>
@@ -148,7 +135,6 @@ const MisReservas = () => {
             </>
           )}
 
-          {/* Reservas Concluidas */}
           {reservasConcluidas.length > 0 && (
             <>
               <h3 className="mt-4 text-success">Reservas Concluidas</h3>
