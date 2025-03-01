@@ -4,6 +4,22 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 
+// Componentes de Material UI
+import {
+  Container,
+  Box,
+  Typography,
+  CircularProgress,
+  Card,
+  CardContent,
+  Button,
+  TextField,
+  Radio,
+  RadioGroup,
+  FormControl,
+  FormControlLabel
+} from "@mui/material";
+
 // Función para formatear fecha sin zona horaria
 const parseDateWithoutTimezone = (dateString) => {
   const [year, month, day] = dateString.split("T")[0].split("-");
@@ -11,16 +27,16 @@ const parseDateWithoutTimezone = (dateString) => {
 };
 
 // Función para formatear horario a HH:mm
-const formatHora = (isoString) => {
-  return isoString.slice(11, 16); // Extrae HH:MM directamente del string ISO
-};
+const formatHora = (isoString) => isoString.slice(11, 16);
 
 const EditarReserva = () => {
   const [reserva, setReserva] = useState(null);
   const [turnosLibres, setTurnosLibres] = useState([]);
-  const [selectedTurno, setSelectedTurno] = useState(null);
+  const [selectedTurno, setSelectedTurno] = useState("");
   const [loading, setLoading] = useState(false);
-  const [fechaNueva, setFechaNueva] = useState(parseDateWithoutTimezone(new Date().toISOString()));
+  const [fechaNueva, setFechaNueva] = useState(
+    parseDateWithoutTimezone(new Date().toISOString())
+  );
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -99,7 +115,6 @@ const EditarReserva = () => {
         },
         { headers: { "x-auth-token": token } }
       );
-
       toast.success("Reserva actualizada correctamente.");
       navigate("/misreservas");
     } catch (err) {
@@ -110,62 +125,98 @@ const EditarReserva = () => {
 
   const minFecha = reserva ? reserva.date : fechaNueva;
 
+  if (loading) {
+    return (
+      <Container maxWidth="sm" sx={{ mt: 8 }}>
+        <Box sx={{ display: "flex", justifyContent: "center" }}>
+          <CircularProgress color="primary" />
+        </Box>
+      </Container>
+    );
+  }
+
   return (
-    <div className="container mt-5">
-      <h1 className="text-center mb-4">Editar Reserva</h1>
-      {loading ? (
-        <div className="text-center">
-          <div className="spinner-border text-primary" role="status">
-            <span className="sr-only">Cargando...</span>
-          </div>
-        </div>
-      ) : reserva ? (
-        <div className="card p-4 shadow-lg border-0 rounded">
-          <h5 className="card-title fw-bold text-primary">Reserva Actual</h5>
-          <p><strong>Cancha:</strong> {reserva.cancha?.name || "Desconocida"}</p>
-          <p><strong>Fecha:</strong> {reserva.date}</p>
-          <p><strong>Horario:</strong> {formatHora(reserva.startTime)} a {formatHora(reserva.endTime)}</p>
+    <Container maxWidth="sm" sx={{ mt: 8, mb: 8 }}>
+      <Typography variant="h4" align="center" sx={{ mb: 4, fontWeight: "bold" }}>
+        Editar Reserva
+      </Typography>
+      {reserva ? (
+        <Card sx={{ p: 3, boxShadow: 3 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: "bold", color: "primary.main", mb: 2 }}>
+              Reserva Actual
+            </Typography>
+            <Typography variant="body1">
+              <strong>Cancha:</strong> {reserva.cancha?.name || "Desconocida"}
+            </Typography>
+            <Typography variant="body1">
+              <strong>Fecha:</strong> {reserva.date}
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 3 }}>
+              <strong>Horario:</strong> {formatHora(reserva.startTime)} a {formatHora(reserva.endTime)}
+            </Typography>
 
-          <h5 className="mt-4">Selecciona un nuevo turno</h5>
-          {turnosLibres.length > 0 ? (
-            turnosLibres.map((turno) => (
-              <div key={turno._id} className="form-check">
-                <input
-                  type="radio"
-                  id={turno._id}
+            <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+              Selecciona un nuevo turno
+            </Typography>
+            {turnosLibres.length > 0 ? (
+              <FormControl component="fieldset" sx={{ mb: 3, width: "100%" }}>
+                <RadioGroup
                   name="turno"
-                  className="form-check-input"
-                  onChange={() => setSelectedTurno(turno)}
-                />
-                <label htmlFor={turno._id} className="form-check-label">
-                  {turno.startTime} a {turno.endTime}
-                </label>
-              </div>
-            ))
-          ) : (
-            <p>No hay turnos disponibles para esta fecha.</p>
-          )}
+                  value={selectedTurno ? selectedTurno._id : ""}
+                  onChange={(e) => {
+                    const turno = turnosLibres.find((t) => t._id === e.target.value);
+                    setSelectedTurno(turno);
+                  }}
+                >
+                  {turnosLibres.map((turno) => (
+                    <FormControlLabel
+                      key={turno._id}
+                      value={turno._id}
+                      control={<Radio />}
+                      label={`${turno.startTime} a ${turno.endTime}`}
+                    />
+                  ))}
+                </RadioGroup>
+              </FormControl>
+            ) : (
+              <Typography variant="body1" sx={{ color: "error.main", mb: 3 }}>
+                No hay turnos disponibles para esta fecha.
+              </Typography>
+            )}
 
-          <h5 className="mt-4">Reagendar otro día</h5>
-          <input
-            type="date"
-            value={fechaNueva}
-            min={minFecha}
-            onChange={(e) => {
-              setFechaNueva(e.target.value);
-              fetchTurnosLibres(e.target.value, reserva.cancha._id);
-            }}
-            className="form-control"
-          />
+            <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+              Reagendar otro día
+            </Typography>
+            <TextField
+              type="date"
+              value={fechaNueva}
+              inputProps={{ min: minFecha }}
+              onChange={(e) => {
+                setFechaNueva(e.target.value);
+                fetchTurnosLibres(e.target.value, reserva.cancha._id);
+              }}
+              fullWidth
+              sx={{ mb: 3 }}
+            />
 
-          <button className="btn btn-primary mt-4 w-100" onClick={handleUpdate} disabled={!selectedTurno}>
-            Actualizar Reserva
-          </button>
-        </div>
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              onClick={handleUpdate}
+              disabled={!selectedTurno}
+            >
+              Actualizar Reserva
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
-        <p className="text-center">Cargando información de la reserva...</p>
+        <Typography variant="body1" align="center">
+          Cargando información de la reserva...
+        </Typography>
       )}
-    </div>
+    </Container>
   );
 };
 

@@ -4,7 +4,7 @@
   "description": "Inicio para frontend y backend",
   "main": "index.js",
   "scripts": {
-    "start": "concurrently \"cd turnero-frontend && npm run dev\" \"cd turnero-backend && npm start\""
+    "start": "concurrently \"cd turnero-frontend && npm run dev -- --host\" \"cd turnero-backend && npm start\""
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

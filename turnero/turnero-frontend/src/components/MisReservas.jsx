@@ -5,6 +5,17 @@ import { AuthContext } from '../context/authcontext.jsx';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 
+// Componentes de Material UI
+import {
+  Container,
+  Box,
+  Typography,
+  CircularProgress,
+  Card,
+  CardContent,
+  Button
+} from '@mui/material';
+
 const MisReservas = () => {
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -38,9 +49,11 @@ const MisReservas = () => {
     fetchReservas();
   }, [navigate]);
 
+  // Helpers para formatear fecha y hora
   const ajustarFecha = (dateString) => dateString.split('T')[0];
   const obtenerHoraDesdeDB = (dateString) => dateString.slice(11, 16);
 
+  // Función para cancelar reserva
   const handleCancel = async (turnoId) => {
     const token = localStorage.getItem('token');
     const result = await Swal.fire({
@@ -65,9 +78,9 @@ const MisReservas = () => {
       );
 
       if (res.status === 200) {
-        setReservas((prevReservas) =>
-          prevReservas.map((reserva) =>
-            reserva._id === turnoId ? { ...reserva, status: "cancelado" } : reserva
+        setReservas((prev) =>
+          prev.map((r) =>
+            r._id === turnoId ? { ...r, status: 'cancelado' } : r
           )
         );
         toast.success('Reserva cancelada correctamente.');
@@ -82,78 +95,113 @@ const MisReservas = () => {
     }
   };
 
+  // Función para editar reserva
   const handleEdit = (turnoId) => navigate(`/editar-reserva/${turnoId}`);
 
-  const reservasActivas = reservas.filter((reserva) => reserva.status === "reservado");
-  const reservasCanceladas = reservas.filter((reserva) => reserva.status === "cancelado");
-  const reservasConcluidas = reservas.filter((reserva) => reserva.status === "concluido");
+  // Separar las reservas por estado
+  const reservasActivas = reservas.filter((r) => r.status === 'reservado');
+  const reservasCanceladas = reservas.filter((r) => r.status === 'cancelado');
+  const reservasConcluidas = reservas.filter((r) => r.status === 'concluido');
+
+  // Componente auxiliar para renderizar tarjetas
+  const RenderReservas = ({ titulo, colorTitulo, lista, esActiva = false }) => (
+    <Box sx={{ mt: 6 }}>
+      <Typography variant="h5" sx={{ mb: 3, color: colorTitulo || 'inherit', fontWeight: 'bold' }}>
+        {titulo}
+      </Typography>
+      {lista.length > 0 ? (
+        lista.map((reserva) => (
+          <Card key={reserva._id} sx={{ mb: 4, p: 2 }}>
+            <CardContent sx={{ p: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+                {reserva.cancha?.name || 'Cancha desconocida'}
+              </Typography>
+              <Typography variant="body1" sx={{ color: 'text.secondary', mb: 2 }}>
+                <strong>Fecha:</strong> {ajustarFecha(reserva.date)} |{' '}
+                <strong>Horario:</strong> {obtenerHoraDesdeDB(reserva.startTime)} - {obtenerHoraDesdeDB(reserva.endTime)}
+              </Typography>
+              {esActiva && (
+                <Box sx={{ mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    size="medium"
+                    sx={{ mr: 2 }}
+                    onClick={() => handleCancel(reserva._id)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="medium"
+                    onClick={() => handleEdit(reserva._id)}
+                  >
+                    Editar
+                  </Button>
+                </Box>
+              )}
+              {!esActiva && reserva.status === 'cancelado' && (
+                <Typography variant="body2" sx={{ color: 'text.disabled', mt: 2 }}>
+                  <em>Cancelado por el usuario</em>
+                </Typography>
+              )}
+              {!esActiva && reserva.status === 'concluido' && (
+                <Typography variant="body2" sx={{ color: 'text.disabled', mt: 2 }}>
+                  <em>Turno concluido</em>
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        ))
+      ) : (
+        <Typography variant="body1" align="center" sx={{ color: 'text.secondary' }}>
+          No tienes reservas {titulo.toLowerCase()}.
+        </Typography>
+      )}
+    </Box>
+  );
 
   return (
-    <div className="container mt-5">
-      <h1 className="text-center mb-4">Mis Reservas</h1>
+    <Container maxWidth="lg" sx={{ mt: 6, mb: 6 }}>
+      <Typography variant="h4" align="center" sx={{ mb: 6, fontWeight: 'bold' }}>
+        Mis Reservas
+      </Typography>
 
       {loading ? (
-        <div className="text-center">
-          <div className="spinner-border text-primary" role="status">
-            <span className="sr-only">Cargando...</span>
-          </div>
-        </div>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <CircularProgress color="primary" />
+        </Box>
       ) : (
         <>
-          <h3>Reservas Activas</h3>
-          {reservasActivas.length > 0 ? (
-            reservasActivas.map((reserva) => (
-              <div key={reserva._id} className="card mb-3 shadow">
-                <div className="card-body">
-                  <h5 className="card-title">{reserva.cancha?.name || 'Cancha desconocida'}</h5>
-                  <p className="card-text">
-                    Fecha: {ajustarFecha(reserva.date)} - Horario: {obtenerHoraDesdeDB(reserva.startTime)} a {obtenerHoraDesdeDB(reserva.endTime)}
-                  </p>
-                  <button className="btn btn-outline-danger me-2" onClick={() => handleCancel(reserva._id)}>❌ Cancelar</button>
-                  <button className="btn btn-outline-primary" onClick={() => handleEdit(reserva._id)}>✏️ Editar</button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-center">No tienes reservas activas.</p>
-          )}
+          {/* Reservas Activas */}
+          <RenderReservas
+            titulo="Reservas Activas"
+            colorTitulo="primary.main"
+            lista={reservasActivas}
+            esActiva
+          />
 
+          {/* Reservas Canceladas */}
           {reservasCanceladas.length > 0 && (
-            <>
-              <h3 className="mt-4 text-danger">Reservas Canceladas</h3>
-              {reservasCanceladas.map((reserva) => (
-                <div key={reserva._id} className="card mb-3 shadow bg-light">
-                  <div className="card-body">
-                    <h5 className="card-title text-muted">{reserva.cancha?.name}</h5>
-                    <p className="card-text text-muted">
-                      Fecha: {ajustarFecha(reserva.date)} - Horario: {obtenerHoraDesdeDB(reserva.startTime)} a {obtenerHoraDesdeDB(reserva.endTime)}
-                    </p>
-                    <p className="card-text text-muted">Cancelado por el usuario</p>
-                  </div>
-                </div>
-              ))}
-            </>
+            <RenderReservas
+              titulo="Reservas Canceladas"
+              colorTitulo="error.main"
+              lista={reservasCanceladas}
+            />
           )}
 
+          {/* Reservas Concluidas */}
           {reservasConcluidas.length > 0 && (
-            <>
-              <h3 className="mt-4 text-success">Reservas Concluidas</h3>
-              {reservasConcluidas.map((reserva) => (
-                <div key={reserva._id} className="card mb-3 shadow bg-light">
-                  <div className="card-body">
-                    <h5 className="card-title text-muted">{reserva.cancha?.name}</h5>
-                    <p className="card-text text-muted">
-                      Fecha: {ajustarFecha(reserva.date)} - Horario: {obtenerHoraDesdeDB(reserva.startTime)} a {obtenerHoraDesdeDB(reserva.endTime)}
-                    </p>
-                    <p className="card-text text-muted">Turno concluido</p>
-                  </div>
-                </div>
-              ))}
-            </>
+            <RenderReservas
+              titulo="Reservas Concluidas"
+              colorTitulo="success.main"
+              lista={reservasConcluidas}
+            />
           )}
         </>
       )}
-    </div>
+    </Container>
   );
 };
 

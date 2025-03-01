@@ -1,8 +1,7 @@
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/authcontext.jsx';
-import './styles/home.css';
-
+import { Box, Typography, Button } from '@mui/material';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -17,12 +16,22 @@ const Home = () => {
   };
 
   return (
-    <div className="d-flex flex-column justify-content-center align-items-center vh-100">
-      <h1 className="display-1 mb-4">Canchitas</h1>
-      <button className="btn btn-primary btn-lg" onClick={handleStart}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+      }}
+    >
+      <Typography variant="h2" sx={{ mb: 4 }}>
+        Canchitas
+      </Typography>
+      <Button variant="contained" color="primary" size="large" onClick={handleStart}>
         Comenzar
-      </button>
-    </div>
+      </Button>
+    </Box>
   );
 };
 
