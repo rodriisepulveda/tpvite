@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import {
   Container,
@@ -12,13 +11,12 @@ import {
   Card,
   CardContent,
   CircularProgress,
-  MenuItem,
 } from "@mui/material";
 
 const Register = () => {
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState(""); // 🔹 Nuevo campo email
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -26,7 +24,13 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post("http://localhost:5000/api/auth/register", { username, password, role });
+      await axios.post("http://localhost:5000/api/auth/register", { 
+        username, 
+        email, // 🔹 Enviamos el email al backend
+        password, 
+        role: "user" 
+      });
+
       Swal.fire({
         title: "Registro exitoso",
         text: "Redirigiendo al inicio de sesión...",
@@ -34,6 +38,7 @@ const Register = () => {
         timer: 2000,
         showConfirmButton: false,
       });
+
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
       Swal.fire({
@@ -57,21 +62,40 @@ const Register = () => {
               Registrarse
             </Typography>
             <form onSubmit={handleSubmit}>
-              <TextField fullWidth label="Usuario" margin="normal" value={username} onChange={(e) => setUsername(e.target.value)} required />
-              <TextField fullWidth label="Contraseña" type="password" margin="normal" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              <TextField
-                select
-                fullWidth
-                label="Rol"
-                margin="normal"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                required
+              <TextField 
+                fullWidth 
+                label="Elegi tu nombre de usuario" 
+                margin="normal" 
+                value={username} 
+                onChange={(e) => setUsername(e.target.value)} 
+                required 
+              />
+              <TextField 
+                fullWidth 
+                label="Correo electrónico" 
+                type="email" 
+                margin="normal" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
+              />
+              <TextField 
+                fullWidth 
+                label="Contraseña" 
+                type="password" 
+                margin="normal" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                required 
+              />
+              <Button 
+                type="submit" 
+                fullWidth 
+                variant="contained" 
+                color="primary" 
+                sx={{ mt: 2 }} 
+                disabled={loading}
               >
-                <MenuItem value="user">Usuario</MenuItem>
-                <MenuItem value="admin">Administrador</MenuItem>
-              </TextField>
-              <Button type="submit" fullWidth variant="contained" color="primary" sx={{ mt: 2 }} disabled={loading}>
                 {loading ? <CircularProgress size={24} /> : "Registrarse"}
               </Button>
             </form>

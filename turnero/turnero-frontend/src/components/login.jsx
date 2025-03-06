@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 
 const Login = () => {
-  const [username, setUsername] = useState("");
+  const [input, setInput] = useState(""); // 🔹 Puede ser email o username
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -25,7 +25,10 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", { username, password });
+      // 🔹 Enviar email si el input tiene "@" (es un email), sino enviar como username
+      const data = input.includes("@") ? { email: input, password } : { username: input, password };
+
+      const res = await axios.post("http://localhost:5000/api/auth/login", data);
       const { token, user } = res.data;
 
       if (user.estado === "Deshabilitado") {
@@ -92,11 +95,11 @@ const Login = () => {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Usuario"
+              label="Usuario o Correo Electrónico"
               variant="outlined"
               margin="normal"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               required
             />
             <TextField

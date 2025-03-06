@@ -8,7 +8,7 @@ const TurnoSchema = new mongoose.Schema({
   description: { type: String, required: true },
   status: { 
     type: String, 
-    enum: ['disponible', 'reservado', 'cancelado'], 
+    enum: ['disponible', 'reservado', 'cancelado', 'concluido'], // Agregado "concluido"
     default: 'disponible' 
   },
   user: { 

@@ -10,9 +10,13 @@ const getEstadisticas = async (req, res) => {
         const totalCanceladas = await Turno.countDocuments({ status: "cancelado" });
         const totalConcluidas = await Turno.countDocuments({ status: "concluido" });
 
-        // Cancha más reservada (Incluye "reservado" y "concluido")
+        console.log("📌 Total reservas:", totalReservas);
+        console.log("📌 Total canceladas:", totalCanceladas);
+        console.log("📌 Total concluidas:", totalConcluidas);
+
+        // Obtener Cancha más reservada (con su nombre)
         const canchaMasReservada = await Turno.aggregate([
-            { $match: { status: { $in: ["reservado", "concluido"] } } }, // Incluye turnos finalizados
+            { $match: { status: { $in: ["reservado", "concluido"] } } },
             { $group: { _id: "$cancha", total: { $sum: 1 } } },
             { $sort: { total: -1 } },
             { $limit: 1 }
@@ -22,9 +26,9 @@ const getEstadisticas = async (req, res) => {
             ? await Cancha.findById(canchaMasReservada[0]._id).select("name") 
             : { name: "N/A" };
 
-        // Usuario más activo (Incluye "reservado" y "concluido")
+        // Obtener Usuario más activo (con su nombre)
         const usuarioMasActivo = await Turno.aggregate([
-            { $match: { status: { $in: ["reservado", "concluido"] } } }, // Incluye turnos finalizados
+            { $match: { status: { $in: ["reservado", "concluido"] } } },
             { $group: { _id: "$user", total: { $sum: 1 } } },
             { $sort: { total: -1 } },
             { $limit: 1 }
@@ -46,6 +50,8 @@ const getEstadisticas = async (req, res) => {
         res.status(500).json({ msg: "Error al obtener estadísticas." });
     }
 };
+
+
 
 
 

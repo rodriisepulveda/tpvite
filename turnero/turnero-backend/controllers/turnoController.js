@@ -205,6 +205,9 @@ const cancelTurno = async (req, res, next) => {
     const ahora = new Date();
     if (turno.startTime > ahora) {
       await actualizarHorariosCancha(turno.cancha, turno.startTime, turno.endTime, null);
+
+      // ✅ También eliminar el turno cancelado para que pueda volver a reservarse
+      await Turno.deleteOne({ _id: turno._id });
     }
 
     res.json({ msg: "Turno cancelado correctamente y horario liberado", turno });
