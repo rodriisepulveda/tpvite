@@ -22,9 +22,11 @@ const getEstadisticas = async (req, res) => {
             { $limit: 1 }
         ]);
 
-        const canchaInfo = canchaMasReservada.length > 0 
-            ? await Cancha.findById(canchaMasReservada[0]._id).select("name") 
-            : { name: "N/A" };
+        let canchaInfo = { name: "N/A" };
+        if (canchaMasReservada.length > 0 && canchaMasReservada[0]._id) {
+            const cancha = await Cancha.findById(canchaMasReservada[0]._id).select("name");
+            canchaInfo = cancha ? cancha : { name: "N/A" };
+        }
 
         // Obtener Usuario más activo (con su nombre)
         const usuarioMasActivo = await Turno.aggregate([
@@ -34,9 +36,11 @@ const getEstadisticas = async (req, res) => {
             { $limit: 1 }
         ]);
 
-        const usuarioInfo = usuarioMasActivo.length > 0 
-            ? await User.findById(usuarioMasActivo[0]._id).select("username") 
-            : { username: "N/A" };
+        let usuarioInfo = { username: "N/A" };
+        if (usuarioMasActivo.length > 0 && usuarioMasActivo[0]._id) {
+            const user = await User.findById(usuarioMasActivo[0]._id).select("username");
+            usuarioInfo = user ? user : { username: "N/A" };
+        }
 
         res.json({
             totalReservas,
@@ -51,10 +55,6 @@ const getEstadisticas = async (req, res) => {
     }
 };
 
-
-
-
-
 // Obtener lista de usuarios con estado y suspensión
 const getUsuarios = async (req, res) => {
     try {
@@ -68,13 +68,13 @@ const getUsuarios = async (req, res) => {
 
 // Actualizar estado de un usuario
 const updateUserStatus = async (req, res) => {
-    const { id } = req.params; // 🔹 Ahora toma el ID de la URL
+    const { id } = req.params;
     const { estado, suspensionHasta } = req.body;
 
     try {
-        console.log("📌 ID recibido en updateUserStatus:", id); // Debug para confirmar que llega bien
+        console.log("📌 ID recibido en updateUserStatus:", id);
 
-        const usuario = await User.findById(id); // 🔹 Buscar por `id`
+        const usuario = await User.findById(id);
         if (!usuario) {
             return res.status(404).json({ msg: "Usuario no encontrado" });
         }
@@ -111,25 +111,24 @@ const updateUserStatus = async (req, res) => {
     }
 };
 
-
 // Obtener reservas con filtros
 const getReservas = async (req, res) => {
     try {
-      const { fecha, estado } = req.query;
-      const filtro = {};
+        const { fecha, estado } = req.query;
+        const filtro = {};
 
-      if (fecha) filtro.date = fecha;
-      if (estado) filtro.status = estado; 
+        if (fecha) filtro.date = fecha;
+        if (estado) filtro.status = estado; 
 
-      const reservas = await Turno.find(filtro)
-        .populate("user", "username email")
-        .populate("cancha", "name")
-        .sort({ date: 1 });
+        const reservas = await Turno.find(filtro)
+            .populate("user", "username email")
+            .populate("cancha", "name")
+            .sort({ date: 1 });
 
-      res.json(reservas);
+        res.json(reservas);
     } catch (err) {
-      console.error("❌ Error en getReservas:", err);
-      res.status(500).json({ msg: "Error al obtener reservas." });
+        console.error("❌ Error en getReservas:", err);
+        res.status(500).json({ msg: "Error al obtener reservas." });
     }
 };
 
@@ -137,5 +136,5 @@ module.exports = {
     getEstadisticas,
     getUsuarios,
     getReservas,
-    updateUserStatus // 🔹 Nuevo endpoint agregado
+    updateUserStatus
 };

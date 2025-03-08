@@ -1,15 +1,13 @@
 const Turno = require("../models/Turno");
 const Cancha = require("../models/Cancha");
+const getGMT3Date = require("../utils/getGMT3Date"); // ✅ Utilizando el helper GMT-3
 
-// Función para convertir fecha y hora en objeto Date
+// 🔹 Función para convertir fecha y hora en objeto Date en GMT-3
 const getTurnoDateTime = (date, time) => {
-  const [hours, minutes] = time.split(':');
-  const turnoDate = new Date(date);
-  turnoDate.setUTCHours(hours, minutes, 0, 0);
-  return turnoDate;
+  return new Date(`${date}T${time}:00-03:00`);
 };
 
-// 🔹 Función para actualizar los horarios de la cancha cuando un turno cambia de estado
+// 🔹 Función para actualizar horarios de cancha
 const actualizarHorariosCancha = async (canchaId, startTime, endTime, usuario = null) => {
   try {
     const cancha = await Cancha.findById(canchaId);
@@ -28,27 +26,25 @@ const actualizarHorariosCancha = async (canchaId, startTime, endTime, usuario = 
   }
 };
 
-// Crear un nuevo turno (establece estado en "reservado")
+// 🔹 Crear un nuevo turno
 const createTurno = async (req, res, next) => {
   const { date, startTime, endTime, title, description, cancha } = req.body;
-  
+
   try {
     const startDateTime = getTurnoDateTime(date, startTime);
     const endDateTime = getTurnoDateTime(date, endTime);
 
-    // Verificar si el turno ya está reservado
-    const existingTurno = await Turno.findOne({ 
-      date: new Date(date), 
-      startTime: startDateTime, 
-      cancha, 
-      status: "reservado" 
+    const existingTurno = await Turno.findOne({
+      date: new Date(date),
+      startTime: startDateTime,
+      cancha,
+      status: "reservado",
     });
 
     if (existingTurno) {
       return res.status(400).json({ msg: "El turno ya está reservado para esa fecha y horario." });
     }
 
-    // Crear turno con estado "reservado"
     const newTurno = new Turno({
       date: new Date(date),
       startTime: startDateTime,
@@ -80,14 +76,13 @@ const getHorariosLibres = async (req, res, next) => {
       return res.status(400).json({ msg: "Faltan parámetros: date y cancha son requeridos" });
     }
 
-    const startOfDay = new Date(`${date}T00:00:00.000Z`);
-    const endOfDay = new Date(`${date}T23:59:59.999Z`);
+    const startOfDay = getTurnoDateTime(date, "00:00");
+    const endOfDay = getTurnoDateTime(date, "23:59");
 
-    // Buscar turnos reservados o cancelados
     const turnosOcupados = await Turno.find({
       date: { $gte: startOfDay, $lte: endOfDay },
       cancha,
-      status: { $in: ["reservado", "cancelado"] } 
+      status: { $in: ["reservado", "cancelado"] }
     }).select("startTime endTime");
 
     const canchaData = await Cancha.findById(cancha).select("horarios");
@@ -96,7 +91,6 @@ const getHorariosLibres = async (req, res, next) => {
       return res.status(404).json({ msg: "Cancha no encontrada" });
     }
 
-    // Filtrar horarios disponibles
     const horariosLibres = canchaData.horarios.filter(
       (horario) =>
         !turnosOcupados.some(
@@ -140,7 +134,7 @@ const getTurnoById = async (req, res, next) => {
   }
 };
 
-// 🔹 Actualizar un turno
+// 🔹 Actualizar un turno existente
 const updateTurno = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -170,8 +164,12 @@ const updateTurno = async (req, res, next) => {
 // 🔹 Actualizar turnos vencidos a "concluido"
 const updateTurnosConcluidos = async () => {
   try {
-    const ahora = new Date();
-    const turnosVencidos = await Turno.find({ status: "reservado", endTime: { $lt: ahora } });
+    const ahoraGMT3 = getGMT3Date();
+
+    const turnosVencidos = await Turno.find({
+      status: "reservado",
+      endTime: { $lt: ahoraGMT3 }
+    });
 
     for (const turno of turnosVencidos) {
       turno.status = "concluido";
@@ -185,7 +183,7 @@ const updateTurnosConcluidos = async () => {
   }
 };
 
-// 🔹 Cancelar un turno (cambia estado a "cancelado")
+// 🔹 Cancelar un turno
 const cancelTurno = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -201,12 +199,9 @@ const cancelTurno = async (req, res, next) => {
     turno.status = "cancelado";
     await turno.save();
 
-    // ✅ Si la hora de inicio aún no pasó, liberar el horario en la cancha
-    const ahora = new Date();
-    if (turno.startTime > ahora) {
+    const ahoraGMT3 = getGMT3Date();
+    if (turno.startTime > ahoraGMT3) {
       await actualizarHorariosCancha(turno.cancha, turno.startTime, turno.endTime, null);
-
-      // ✅ También eliminar el turno cancelado para que pueda volver a reservarse
       await Turno.deleteOne({ _id: turno._id });
     }
 
@@ -217,7 +212,7 @@ const cancelTurno = async (req, res, next) => {
   }
 };
 
-
+// 🔹 Exportar funciones
 module.exports = {
   createTurno,
   getHorariosLibres,
