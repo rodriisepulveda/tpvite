@@ -6,7 +6,6 @@ import Swal from "sweetalert2";
 // Componentes de Material UI
 import {
   Box,
-  TextField,
   Table,
   TableBody,
   TableCell,
@@ -17,17 +16,12 @@ import {
   Button,
   CircularProgress,
   Chip,
-  Grid,
-  Pagination,
-  Typography
+  Grid
 } from "@mui/material";
 
 const UsersList = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const usuariosPorPagina = 5;
 
   useEffect(() => {
     fetchUsuarios();
@@ -57,80 +51,55 @@ const UsersList = () => {
     }
   };
 
-  // 🔹 Función para modificar un usuario
-  const handleEditUser = async (userId, currentData) => {
-    const { value: formValues } = await Swal.fire({
-      title: "Modificar Usuario",
-      html: `
-        <label for="swal-username" style="display:block; text-align:left; font-weight:bold;">Nombre:</label>
-        <input id="swal-username" class="swal2-input" value="${currentData.username}" placeholder="Ingrese el nombre de usuario">
-        
-        <label for="swal-email" style="display:block; text-align:left; font-weight:bold; margin-top:10px;">Correo:</label>
-        <input id="swal-email" class="swal2-input" value="${currentData.email}" placeholder="Ingrese el correo electrónico">
-        
-        <label for="swal-role" style="display:block; text-align:left; font-weight:bold; margin-top:10px;">Rol:</label>
-        <select id="swal-role" class="swal2-input">
-          <option value="user" ${currentData.role === "user" ? "selected" : ""}>Usuario</option>
-          <option value="admin" ${currentData.role === "admin" ? "selected" : ""}>Administrador</option>
-        </select>
-      `,
-      focusConfirm: false,
+  // 🔹 Función para cambiar el estado del usuario (Habilitar/Deshabilitar)
+  const handleChangeUserStatus = async (userId, nuevoEstado, username) => {
+    const confirmacion = await Swal.fire({
+      title: `¿${nuevoEstado === "Habilitado" ? "Habilitar" : "Deshabilitar"} a ${username}?`,
+      text: `El usuario será ${nuevoEstado === "Habilitado" ? "habilitado" : "deshabilitado"}.`,
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Guardar",
-      cancelButtonText: "Cancelar",
-      preConfirm: () => {
-        return {
-          username: document.getElementById("swal-username").value,
-          email: document.getElementById("swal-email").value,
-          role: document.getElementById("swal-role").value
-        };
-      }
+      confirmButtonColor: nuevoEstado === "Habilitado" ? "#28a745" : "#d33",
+      cancelButtonColor: "#6c757d",
+      confirmButtonText: `Sí, ${nuevoEstado === "Habilitado" ? "habilitar" : "deshabilitar"}`
     });
 
-    if (!formValues) return;
+    if (!confirmacion.isConfirmed) return;
 
     try {
       const token = localStorage.getItem("token");
-      await axios.put(`http://localhost:5000/api/admin/usuarios/${userId}`, formValues, {
-        headers: { "x-auth-token": token }
-      });
-
-      toast.success(`Usuario ${formValues.username} actualizado correctamente`);
-      setUsuarios((prev) =>
-        prev.map((user) => (user._id === userId ? { ...user, ...formValues } : user))
+      await axios.put(
+        `http://localhost:5000/api/admin/usuarios/${userId}/estado`,
+        { estado: nuevoEstado },
+        { headers: { "x-auth-token": token } }
       );
+
+      toast.success(`Usuario ${username} ahora está ${nuevoEstado}.`);
+      fetchUsuarios();
     } catch (err) {
-      console.error("❌ Error al actualizar el usuario:", err);
-      toast.error("Error al actualizar el usuario.");
+      console.error("❌ Error al actualizar el estado del usuario:", err);
+      toast.error("Error al actualizar el estado del usuario.");
     }
   };
 
-  // 🔹 Función para suspender un usuario
+  // 🔹 Función para suspender un usuario con duración
   const handleSuspendUser = async (userId, username) => {
     const { value: tiempo } = await Swal.fire({
       title: "Selecciona la duración de la suspensión",
-      html: `
-        <select id="suspension-select" class="swal2-input">
-          <option value="3">3 días</option>
-          <option value="7">1 semana</option>
-          <option value="14">2 semanas</option>
-          <option value="30">1 mes</option>
-        </select>
-      `,
+      input: "select",
+      inputOptions: {
+        "3": "3 días",
+        "7": "1 semana",
+        "14": "2 semanas",
+        "30": "1 mes"
+      },
+      inputPlaceholder: "Duración de la suspensión",
       showCancelButton: true,
       confirmButtonText: "Confirmar",
       cancelButtonText: "Cancelar",
-      preConfirm: () => {
-        const selectedValue = document.getElementById("suspension-select").value;
-        if (!selectedValue) {
-          Swal.showValidationMessage("Debes seleccionar un tiempo de suspensión.");
-        }
-        return selectedValue;
-      }
     });
-  
+
     if (!tiempo) return;
-  
+
     const confirmacion = await Swal.fire({
       title: `¿Suspender a ${username}?`,
       text: `El usuario será suspendido por ${tiempo} días.`,
@@ -140,12 +109,12 @@ const UsersList = () => {
       cancelButtonColor: "#d33",
       confirmButtonText: "Sí, suspender"
     });
-  
+
     if (!confirmacion.isConfirmed) return;
-  
+
     const fechaSuspension = new Date();
     fechaSuspension.setDate(fechaSuspension.getDate() + parseInt(tiempo));
-  
+
     try {
       const token = localStorage.getItem("token");
       await axios.put(
@@ -153,7 +122,7 @@ const UsersList = () => {
         { estado: "Suspendido", suspensionHasta: fechaSuspension.toISOString() },
         { headers: { "x-auth-token": token } }
       );
-  
+
       toast.success(`Usuario ${username} suspendido por ${tiempo} días.`);
       fetchUsuarios();
     } catch (err) {
@@ -161,9 +130,6 @@ const UsersList = () => {
       toast.error("Error al suspender al usuario.");
     }
   };
-  
-  
-  
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -200,25 +166,45 @@ const UsersList = () => {
                 </TableCell>
                 <TableCell>
                   <Grid container spacing={1}>
-                    {usuario.estado !== "Deshabilitado" && (
+                    {/* Si el usuario está suspendido o deshabilitado, mostrar "Habilitar" */}
+                    {(usuario.estado === "Suspendido" || usuario.estado === "Deshabilitado") && (
                       <Grid item>
-                        <Button variant="contained" color="error" size="small" onClick={() => handleChangeUserStatus(usuario._id, "Deshabilitado", usuario.username)}>
-                          DESHABILITAR
+                        <Button
+                          variant="contained"
+                          color="success"
+                          size="small"
+                          onClick={() => handleChangeUserStatus(usuario._id, "Habilitado", usuario.username)}
+                        >
+                          HABILITAR
                         </Button>
                       </Grid>
                     )}
+                    {/* Si está habilitado, mostrar botón de suspensión */}
                     {usuario.estado === "Habilitado" && (
                       <Grid item>
-                        <Button variant="contained" color="warning" size="small" onClick={() => handleSuspendUser(usuario._id, usuario.username)}>
+                        <Button
+                          variant="contained"
+                          color="warning"
+                          size="small"
+                          onClick={() => handleSuspendUser(usuario._id, usuario.username)}
+                        >
                           SUSPENDER
                         </Button>
                       </Grid>
                     )}
-                    <Grid item>
-                      <Button variant="contained" color="primary" size="small" onClick={() => handleEditUser(usuario._id, usuario)}>
-                        MODIFICAR
-                      </Button>
-                    </Grid>
+                    {/* Si no está deshabilitado, mostrar botón de deshabilitar */}
+                    {usuario.estado !== "Deshabilitado" && usuario.estado !== "Suspendido" && (
+                      <Grid item>
+                        <Button
+                          variant="contained"
+                          color="error"
+                          size="small"
+                          onClick={() => handleChangeUserStatus(usuario._id, "Deshabilitado", usuario.username)}
+                        >
+                          DESHABILITAR
+                        </Button>
+                      </Grid>
+                    )}
                   </Grid>
                 </TableCell>
               </TableRow>
