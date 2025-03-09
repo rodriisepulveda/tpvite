@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 import { AuthContext } from '../context/authcontext.jsx';
+import RelojGMT3 from "../components/RelojGMT3"; // Importamos el reloj
+
 
 // Componentes de Material UI
 import {
@@ -167,6 +169,9 @@ const Turnos = () => {
       <Typography variant="h6" align="center" sx={{ mb: 4, color: 'text.secondary' }}>
         {formatDateToLocale(selectedDate)}
       </Typography>
+
+          {/* Reloj visible en tiempo real */}
+<RelojGMT3 />
 
       {/* Selector de fecha */}
       <Box sx={{ textAlign: 'center', mb: 4 }}>

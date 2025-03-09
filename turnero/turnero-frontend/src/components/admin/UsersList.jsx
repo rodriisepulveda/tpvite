@@ -105,116 +105,127 @@ const UsersList = () => {
     }
   };
 
-  // 🔹 Función para cambiar el estado del usuario
-  const handleChangeUserStatus = async (userId, estado, username) => {
+  // 🔹 Función para suspender un usuario
+  const handleSuspendUser = async (userId, username) => {
+    const { value: tiempo } = await Swal.fire({
+      title: "Selecciona la duración de la suspensión",
+      html: `
+        <select id="suspension-select" class="swal2-input">
+          <option value="3">3 días</option>
+          <option value="7">1 semana</option>
+          <option value="14">2 semanas</option>
+          <option value="30">1 mes</option>
+        </select>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Confirmar",
+      cancelButtonText: "Cancelar",
+      preConfirm: () => {
+        const selectedValue = document.getElementById("suspension-select").value;
+        if (!selectedValue) {
+          Swal.showValidationMessage("Debes seleccionar un tiempo de suspensión.");
+        }
+        return selectedValue;
+      }
+    });
+  
+    if (!tiempo) return;
+  
     const confirmacion = await Swal.fire({
-      title: `¿Seguro que deseas cambiar el estado de ${username}?`,
-      text: `El estado será cambiado a "${estado}"`,
+      title: `¿Suspender a ${username}?`,
+      text: `El usuario será suspendido por ${tiempo} días.`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#28a745",
+      confirmButtonColor: "#FFEB3B",
       cancelButtonColor: "#d33",
-      confirmButtonText: "Sí, cambiar estado"
+      confirmButtonText: "Sí, suspender"
     });
-
+  
     if (!confirmacion.isConfirmed) return;
-
+  
+    const fechaSuspension = new Date();
+    fechaSuspension.setDate(fechaSuspension.getDate() + parseInt(tiempo));
+  
     try {
       const token = localStorage.getItem("token");
       await axios.put(
         `http://localhost:5000/api/admin/usuarios/${userId}/estado`,
-        { estado },
+        { estado: "Suspendido", suspensionHasta: fechaSuspension.toISOString() },
         { headers: { "x-auth-token": token } }
       );
-
-      toast.success(`Usuario ${username} ahora está ${estado}.`);
-      setUsuarios((prev) =>
-        prev.map((user) => (user._id === userId ? { ...user, estado } : user))
-      );
+  
+      toast.success(`Usuario ${username} suspendido por ${tiempo} días.`);
+      fetchUsuarios();
     } catch (err) {
-      console.error("❌ Error al actualizar el estado del usuario:", err);
-      toast.error("Error al actualizar el estado del usuario.");
+      console.error("❌ Error al suspender al usuario:", err);
+      toast.error("Error al suspender al usuario.");
     }
   };
-
-  // 🔹 Filtrar usuarios
-  const usuariosFiltrados = usuarios.filter((usuario) => {
-    const nombre = usuario.username?.toLowerCase() || "";
-    const email = usuario.email?.toLowerCase() || "";
-    return nombre.includes(searchTerm.toLowerCase()) || email.includes(searchTerm.toLowerCase());
-  });
-
-  // 🔹 Paginación
-  const usuariosPaginados = usuariosFiltrados.slice(
-    (currentPage - 1) * usuariosPorPagina,
-    currentPage * usuariosPorPagina
-  );
+  
+  
+  
 
   return (
     <Box sx={{ mt: 4 }}>
-      <TextField
-        fullWidth
-        variant="outlined"
-        placeholder="Buscar usuario por nombre o email..."
-        value={searchTerm}
-        onChange={(e) => {
-          setSearchTerm(e.target.value);
-          setCurrentPage(1);
-        }}
-        sx={{ mb: 3 }}
-      />
-
-      {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-          <CircularProgress color="primary" />
-        </Box>
-      ) : (
-        <>
-          <TableContainer component={Paper} sx={{ maxHeight: 400, boxShadow: 3 }}>
-            <Table stickyHeader>
-              <TableHead sx={{ "& .MuiTableCell-head": { backgroundColor: "#1976d2", color: "white", fontWeight: "bold" } }}>
-                <TableRow>
-                  <TableCell>Nombre</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Rol</TableCell>
-                  <TableCell>Estado</TableCell>
-                  <TableCell>Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {usuariosPaginados.length > 0 ? (
-                  usuariosPaginados.map((usuario) => (
-                    <TableRow key={usuario._id} hover>
-                      <TableCell>{usuario.username || "Desconocido"}</TableCell>
-                      <TableCell>{usuario.email || "Sin Email"}</TableCell>
-                      <TableCell>{usuario.role}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={usuario.estado}
-                          color={usuario.estado === "Deshabilitado" ? "error" : "primary"}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Grid container spacing={1}>
-                          <Grid item>
-                            <Button variant="contained" color="primary" size="small" onClick={() => handleEditUser(usuario._id, usuario)}>
-                              MODIFICAR
-                            </Button>
-                          </Grid>
-                        </Grid>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">No hay usuarios registrados.</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </>
-      )}
+      <TableContainer component={Paper} sx={{ maxHeight: 400, boxShadow: 3 }}>
+        <Table stickyHeader>
+          <TableHead sx={{ "& .MuiTableCell-head": { backgroundColor: "#1976d2", color: "white", fontWeight: "bold" } }}>
+            <TableRow>
+              <TableCell>Nombre</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Rol</TableCell>
+              <TableCell>Estado</TableCell>
+              <TableCell>Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {usuarios.map((usuario) => (
+              <TableRow key={usuario._id} hover>
+                <TableCell>{usuario.username}</TableCell>
+                <TableCell>{usuario.email}</TableCell>
+                <TableCell>{usuario.role}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={usuario.estado}
+                    sx={{
+                      bgcolor:
+                        usuario.estado === "Habilitado"
+                          ? "success.main"
+                          : usuario.estado === "Deshabilitado"
+                          ? "error.main"
+                          : "warning.main",
+                      color: "white",
+                    }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Grid container spacing={1}>
+                    {usuario.estado !== "Deshabilitado" && (
+                      <Grid item>
+                        <Button variant="contained" color="error" size="small" onClick={() => handleChangeUserStatus(usuario._id, "Deshabilitado", usuario.username)}>
+                          DESHABILITAR
+                        </Button>
+                      </Grid>
+                    )}
+                    {usuario.estado === "Habilitado" && (
+                      <Grid item>
+                        <Button variant="contained" color="warning" size="small" onClick={() => handleSuspendUser(usuario._id, usuario.username)}>
+                          SUSPENDER
+                        </Button>
+                      </Grid>
+                    )}
+                    <Grid item>
+                      <Button variant="contained" color="primary" size="small" onClick={() => handleEditUser(usuario._id, usuario)}>
+                        MODIFICAR
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </Box>
   );
 };

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
+import RelojGMT3 from "../components/RelojGMT3"; // Importamos el reloj
 
 // Importa los componentes de Material UI
 import {
@@ -8,16 +9,22 @@ import {
   Box,
   Typography,
   CircularProgress,
-  Grid
-} from '@mui/material';
+  Grid,
+} from "@mui/material";
 
 // Importa tus componentes internos
-import StatisticsCard from '../components/admin/StatisticsCard';
-import ReservationsTable from '../components/admin/ReservationsTable';
-import UsersList from '../components/admin/UsersList';
+import StatisticsCard from "../components/admin/StatisticsCard";
+import ReservationsTable from "../components/admin/ReservationsTable";
+import UsersList from "../components/admin/UsersList";
 
 // Importa los íconos (react-icons)
-import { FaCalendarAlt, FaFutbol, FaUser, FaBan, FaCheckCircle } from 'react-icons/fa';
+import {
+  FaCalendarAlt,
+  FaFutbol,
+  FaUser,
+  FaBan,
+  FaCheckCircle,
+} from "react-icons/fa";
 
 const AdminDashboard = () => {
   const [estadisticas, setEstadisticas] = useState(null);
@@ -26,17 +33,22 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchEstadisticas = async () => {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
 
       if (!token) {
-        toast.error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+        toast.error(
+          "Tu sesión ha expirado. Por favor, inicia sesión nuevamente."
+        );
         return;
       }
 
       try {
-        const res = await axios.get('http://localhost:5000/api/admin/estadisticas', {
-          headers: { 'x-auth-token': token },
-        });
+        const res = await axios.get(
+          "http://localhost:5000/api/admin/estadisticas",
+          {
+            headers: { "x-auth-token": token },
+          }
+        );
 
         // Evita mostrar "undefined"
         if (!res.data.totalConcluidas) {
@@ -45,8 +57,8 @@ const AdminDashboard = () => {
 
         setEstadisticas(res.data);
       } catch (err) {
-        console.error('❌ Error al obtener las estadísticas:', err);
-        toast.error('Error al obtener las estadísticas.');
+        console.error("❌ Error al obtener las estadísticas:", err);
+        toast.error("Error al obtener las estadísticas.");
       } finally {
         setLoading(false);
       }
@@ -58,7 +70,7 @@ const AdminDashboard = () => {
   // 1. Mostrar spinner de carga
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 5 }}>
         <CircularProgress color="primary" />
       </Box>
     );
@@ -71,7 +83,7 @@ const AdminDashboard = () => {
         <Typography
           variant="h5"
           align="center"
-          sx={{ mb: 4, fontWeight: 'bold' }}
+          sx={{ mb: 4, fontWeight: "bold" }}
         >
           Panel de Administración
         </Typography>
@@ -79,7 +91,7 @@ const AdminDashboard = () => {
           variant="body1"
           color="error"
           align="center"
-          sx={{ fontWeight: 'bold' }}
+          sx={{ fontWeight: "bold" }}
         >
           No se pudieron cargar las estadísticas.
         </Typography>
@@ -94,7 +106,7 @@ const AdminDashboard = () => {
       <Typography
         variant="h5"
         align="center"
-        sx={{ mb: 4, fontWeight: 'bold' }}
+        sx={{ mb: 4, fontWeight: "bold" }}
       >
         Panel de Administración
       </Typography>
@@ -128,7 +140,7 @@ const AdminDashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatisticsCard
             title="Usuario Más Activo"
-            value={estadisticas.usuarioMasActivo || 'N/A'}
+            value={estadisticas.usuarioMasActivo || "N/A"}
             icon={<FaUser />}
             bgColor="warning.main"
           />
@@ -138,12 +150,16 @@ const AdminDashboard = () => {
         <Grid item xs={12}>
           <StatisticsCard
             title="Cancha Más Reservada"
-            value={estadisticas.canchaMasReservada || 'N/A'}
+            value={estadisticas.canchaMasReservada || "N/A"}
             icon={<FaFutbol />}
             bgColor="success.main"
           />
         </Grid>
       </Grid>
+      {/* Reloj visible en tiempo real */}
+      <Box sx={{ p: 2, textAlign: "center" }}>
+        <RelojGMT3 />
+      </Box>
 
       {/* Sección de Reservas */}
       <Box sx={{ mt: 4 }}>
