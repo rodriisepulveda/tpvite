@@ -57,7 +57,14 @@ const MisReservas = () => {
 
   // Helpers para formatear fecha y hora
   const ajustarFecha = (dateString) => dateString.split("T")[0];
-  const obtenerHoraDesdeDB = (dateString) => dateString.slice(11, 16);
+  // Formatear la hora a formato 24hs (sin AM/PM) en GMT-3
+  const obtenerHoraDesdeDB = (dateString) =>
+    new Date(dateString).toLocaleTimeString("es-AR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "America/Argentina/Buenos_Aires",
+    });
 
   // Función para cancelar reserva
   const handleCancel = async (turnoId) => {

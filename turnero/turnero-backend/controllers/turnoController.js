@@ -1,36 +1,37 @@
 const Turno = require("../models/Turno");
 const Cancha = require("../models/Cancha");
-const getGMT3Date = require("../utils/getGMT3Date"); // ✅ Utilizando el helper GMT-3
+const getGMT3Date = require("../utils/getGMT3Date");
 
-// 🔹 Función para convertir fecha y hora en objeto Date en GMT-3
+// Horarios predefinidos
+const horariosPredefinidos = [
+  { startTime: "14:00", endTime: "15:30" },
+  { startTime: "15:30", endTime: "17:00" },
+  { startTime: "17:00", endTime: "18:30" },
+  { startTime: "18:30", endTime: "20:00" },
+  { startTime: "20:00", endTime: "21:30" },
+  { startTime: "21:30", endTime: "23:00" },
+];
+
+// Función para convertir fecha y hora en objeto Date en GMT-3
 const getTurnoDateTime = (date, time) => {
   return new Date(`${date}T${time}:00-03:00`);
 };
 
-// 🔹 Función para actualizar horarios de cancha
-const actualizarHorariosCancha = async (canchaId, startTime, endTime, usuario = null) => {
-  try {
-    const cancha = await Cancha.findById(canchaId);
-    if (!cancha) return;
-
-    const horario = cancha.horarios.find(
-      (h) => h.startTime === startTime && h.endTime === endTime
-    );
-
-    if (horario) {
-      horario.usuario = usuario;
-      await cancha.save({ validateModifiedOnly: true });
-    }
-  } catch (err) {
-    console.error("Error actualizando horarios de cancha:", err);
-  }
-};
-
-// 🔹 Crear un nuevo turno
+// Crear un nuevo turno
 const createTurno = async (req, res, next) => {
   const { date, startTime, endTime, title, description, cancha } = req.body;
 
   try {
+    // Verificar que el horario esté dentro de los horarios predefinidos
+    const horarioValido = horariosPredefinidos.some(
+      (h) => h.startTime === startTime && h.endTime === endTime
+    );
+    if (!horarioValido) {
+      return res.status(400).json({
+        msg: "El horario proporcionado no es válido. Horarios disponibles: 14:00-15:30, 15:30-17:00, 17:00-18:30, 18:30-20:00, 20:00-21:30, 21:30-23:00."
+      });
+    }
+
     const startDateTime = getTurnoDateTime(date, startTime);
     const endDateTime = getTurnoDateTime(date, endTime);
 
@@ -57,8 +58,7 @@ const createTurno = async (req, res, next) => {
     });
 
     const turno = await newTurno.save();
-    await actualizarHorariosCancha(cancha, startTime, endTime, req.user.id);
-
+    // No se actualizan horarios en la cancha ya que se usan los predefinidos
     res.status(201).json(turno);
   } catch (err) {
     console.error("Error en createTurno:", err);
@@ -66,7 +66,7 @@ const createTurno = async (req, res, next) => {
   }
 };
 
-// 🔹 Obtener horarios libres de una cancha
+// Obtener horarios libres de una cancha usando horarios predefinidos
 const getHorariosLibres = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -85,20 +85,13 @@ const getHorariosLibres = async (req, res, next) => {
       status: { $in: ["reservado", "cancelado"] }
     }).select("startTime endTime");
 
-    const canchaData = await Cancha.findById(cancha).select("horarios");
-
-    if (!canchaData) {
-      return res.status(404).json({ msg: "Cancha no encontrada" });
-    }
-
-    const horariosLibres = canchaData.horarios.filter(
-      (horario) =>
-        !turnosOcupados.some(
-          (turno) =>
-            turno.startTime.getTime() === getTurnoDateTime(date, horario.startTime).getTime() &&
-            turno.endTime.getTime() === getTurnoDateTime(date, horario.endTime).getTime()
-        )
-    );
+    // Filtrar los horarios predefinidos que no estén ocupados
+    const horariosLibres = horariosPredefinidos.filter((horario) => {
+      return !turnosOcupados.some((turno) => {
+        return turno.startTime.getTime() === getTurnoDateTime(date, horario.startTime).getTime() &&
+               turno.endTime.getTime() === getTurnoDateTime(date, horario.endTime).getTime();
+      });
+    });
 
     res.json(horariosLibres);
   } catch (err) {
@@ -107,7 +100,7 @@ const getHorariosLibres = async (req, res, next) => {
   }
 };
 
-// 🔹 Obtener reservas del usuario autenticado
+// Obtener reservas del usuario autenticado
 const getMyTurnos = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -119,7 +112,7 @@ const getMyTurnos = async (req, res, next) => {
   }
 };
 
-// 🔹 Obtener un turno por ID
+// Obtener un turno por ID
 const getTurnoById = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -134,11 +127,21 @@ const getTurnoById = async (req, res, next) => {
   }
 };
 
-// 🔹 Actualizar un turno existente
+// Actualizar un turno existente
 const updateTurno = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
     const { date, startTime, endTime, cancha } = req.body;
+
+    // Verificar que el horario esté dentro de los horarios predefinidos
+    const horarioValido = horariosPredefinidos.some(
+      (h) => h.startTime === startTime && h.endTime === endTime
+    );
+    if (!horarioValido) {
+      return res.status(400).json({
+        msg: "El horario proporcionado no es válido. Horarios disponibles: 14:00-15:30, 15:30-17:00, 17:00-18:30, 18:30-20:00, 20:00-21:30, 21:30-23:00."
+      });
+    }
 
     const startDateTime = getTurnoDateTime(date, startTime);
     const endDateTime = getTurnoDateTime(date, endTime);
@@ -161,7 +164,7 @@ const updateTurno = async (req, res, next) => {
   }
 };
 
-// 🔹 Actualizar turnos vencidos a "concluido"
+// Actualizar turnos vencidos a "concluido"
 const updateTurnosConcluidos = async () => {
   try {
     const ahoraGMT3 = getGMT3Date();
@@ -174,7 +177,7 @@ const updateTurnosConcluidos = async () => {
     for (const turno of turnosVencidos) {
       turno.status = "concluido";
       await turno.save();
-      await actualizarHorariosCancha(turno.cancha, turno.startTime, turno.endTime);
+      // Ya no se actualizan horarios en la cancha, pues se usan los predefinidos
     }
 
     console.log(`✅ ${turnosVencidos.length} turnos actualizados a 'concluido'.`);
@@ -183,7 +186,7 @@ const updateTurnosConcluidos = async () => {
   }
 };
 
-// 🔹 Cancelar un turno
+// Cancelar un turno
 const cancelTurno = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -201,7 +204,7 @@ const cancelTurno = async (req, res, next) => {
 
     const ahoraGMT3 = getGMT3Date();
     if (turno.startTime > ahoraGMT3) {
-      await actualizarHorariosCancha(turno.cancha, turno.startTime, turno.endTime, null);
+      // No se actualizan horarios en la cancha; simplemente se elimina el turno si aún no inició
       await Turno.deleteOne({ _id: turno._id });
     }
 
@@ -212,7 +215,7 @@ const cancelTurno = async (req, res, next) => {
   }
 };
 
-// 🔹 Exportar funciones
+// Exportar funciones
 module.exports = {
   createTurno,
   getHorariosLibres,

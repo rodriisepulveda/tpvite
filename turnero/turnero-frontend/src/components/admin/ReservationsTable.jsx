@@ -93,6 +93,15 @@ const ReservationsTable = () => {
     currentPage * reservasPorPagina
   );
 
+  // Helper para formatear la hora en formato 24hs
+  const formatTime = (dateString) =>
+    new Date(dateString).toLocaleTimeString("es-AR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "America/Argentina/Buenos_Aires",
+    });
+
   return (
     <Box sx={{ width: '100%', mt: 3 }}>
       {/* Sección de filtros */}
@@ -184,8 +193,8 @@ const ReservationsTable = () => {
             {reservasPaginadas.length > 0 ? (
               reservasPaginadas.map((reserva) => {
                 const fecha = reserva.date ? reserva.date.split('T')[0] : 'N/A';
-                const startTime = reserva.startTime ? reserva.startTime.split('T')[1]?.slice(0, 5) : 'N/A';
-                const endTime = reserva.endTime ? reserva.endTime.split('T')[1]?.slice(0, 5) : 'N/A';
+                const startTime = reserva.startTime ? formatTime(reserva.startTime) : 'N/A';
+                const endTime = reserva.endTime ? formatTime(reserva.endTime) : 'N/A';
                 const cancha = reserva.cancha?.name || 'N/A';
                 const usuario = reserva.user?.username || 'Desconocido';
                 const estado = reserva.status || 'Desconocido';
