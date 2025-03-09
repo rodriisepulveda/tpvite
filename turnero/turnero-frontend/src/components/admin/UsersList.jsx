@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { toast } from 'react-toastify';
-import Swal from 'sweetalert2';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
+import Swal from "sweetalert2";
 
 // Componentes de Material UI
 import {
@@ -20,129 +20,131 @@ import {
   Grid,
   Pagination,
   Typography
-} from '@mui/material';
+} from "@mui/material";
 
 const UsersList = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const usuariosPorPagina = 5;
 
   useEffect(() => {
-    const fetchUsuarios = async () => {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        toast.error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const res = await axios.get('http://localhost:5000/api/admin/usuarios', {
-          headers: { 'x-auth-token': token },
-        });
-
-        const usuariosProcesados = res.data.map((user) => ({
-          ...user,
-          _id: typeof user._id === 'object' && user._id.$oid ? user._id.$oid : user._id,
-        }));
-
-        setUsuarios(usuariosProcesados);
-      } catch (err) {
-        console.error('❌ Error al obtener los usuarios:', err);
-        toast.error('Error al obtener los usuarios.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUsuarios();
   }, []);
 
-  // Función para mostrar SweetAlert y confirmar el cambio de estado
-  const confirmarCambioEstado = async (estado, username) => {
-    const acciones = {
-      Habilitado: 'habilitar',
-      Suspendido: 'suspender',
-      Deshabilitado: 'deshabilitar',
-    };
+  const fetchUsuarios = async () => {
+    setLoading(true);
+    const token = localStorage.getItem("token");
 
-    const icono = estado === 'Habilitado' ? 'success' : estado === 'Suspendido' ? 'warning' : 'error';
-    const accion = acciones[estado];
-
-    return Swal.fire({
-      title: `¿Estás seguro de ${accion} a ${username}?`,
-      icon: icono,
-      showCancelButton: true,
-      confirmButtonColor: estado === 'Habilitado' ? '#28a745' : estado === 'Suspendido' ? '#FFEB3B' : '#dc3545',
-      cancelButtonColor: '#6c757d',
-      confirmButtonText: `Sí, ${accion}`,
-      cancelButtonText: 'Cancelar',
-    });
-  };
-
-  // Función para actualizar el estado del usuario
-  const handleChangeUserStatus = async (userId, estado, username) => {
-    const result = await confirmarCambioEstado(estado, username);
-    if (!result.isConfirmed) return;
-
-    let suspensionHasta = null;
-
-    if (estado === 'Suspendido') {
-      const { value: tiempo } = await Swal.fire({
-        title: 'Selecciona la duración de la suspensión',
-        input: 'select',
-        inputOptions: {
-          '3': '3 días',
-          '7': '1 semana',
-          '14': '2 semanas',
-          '30': '1 mes',
-        },
-        inputPlaceholder: 'Duración de la suspensión',
-        showCancelButton: true,
-        confirmButtonText: 'Confirmar',
-      });
-
-      if (!tiempo) return;
-
-      const fechaSuspension = new Date();
-      fechaSuspension.setDate(fechaSuspension.getDate() + parseInt(tiempo));
-      suspensionHasta = fechaSuspension.toISOString();
+    if (!token) {
+      toast.error("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
+      setLoading(false);
+      return;
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const res = await axios.get("http://localhost:5000/api/admin/usuarios", {
+        headers: { "x-auth-token": token }
+      });
 
-      await axios.put(
-        `http://localhost:5000/api/admin/usuarios/${userId}/estado`,
-        { estado, suspensionHasta },
-        { headers: { 'x-auth-token': token } }
-      );
-
-      toast.success(`Usuario ${username} ahora está ${estado}.`);
-
-      setUsuarios((prevUsuarios) =>
-        prevUsuarios.map((user) =>
-          user._id === userId ? { ...user, estado, suspensionHasta } : user
-        )
-      );
+      setUsuarios(res.data);
     } catch (err) {
-      console.error('❌ Error al actualizar el estado del usuario:', err);
-      toast.error('Error al actualizar el estado del usuario.');
+      console.error("❌ Error al obtener los usuarios:", err);
+      toast.error("Error al obtener los usuarios.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Filtrar usuarios según el término de búsqueda
+  // 🔹 Función para modificar un usuario
+  const handleEditUser = async (userId, currentData) => {
+    const { value: formValues } = await Swal.fire({
+      title: "Modificar Usuario",
+      html: `
+        <label for="swal-username" style="display:block; text-align:left; font-weight:bold;">Nombre:</label>
+        <input id="swal-username" class="swal2-input" value="${currentData.username}" placeholder="Ingrese el nombre de usuario">
+        
+        <label for="swal-email" style="display:block; text-align:left; font-weight:bold; margin-top:10px;">Correo:</label>
+        <input id="swal-email" class="swal2-input" value="${currentData.email}" placeholder="Ingrese el correo electrónico">
+        
+        <label for="swal-role" style="display:block; text-align:left; font-weight:bold; margin-top:10px;">Rol:</label>
+        <select id="swal-role" class="swal2-input">
+          <option value="user" ${currentData.role === "user" ? "selected" : ""}>Usuario</option>
+          <option value="admin" ${currentData.role === "admin" ? "selected" : ""}>Administrador</option>
+        </select>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: "Guardar",
+      cancelButtonText: "Cancelar",
+      preConfirm: () => {
+        return {
+          username: document.getElementById("swal-username").value,
+          email: document.getElementById("swal-email").value,
+          role: document.getElementById("swal-role").value
+        };
+      }
+    });
+
+    if (!formValues) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`http://localhost:5000/api/admin/usuarios/${userId}`, formValues, {
+        headers: { "x-auth-token": token }
+      });
+
+      toast.success(`Usuario ${formValues.username} actualizado correctamente`);
+      setUsuarios((prev) =>
+        prev.map((user) => (user._id === userId ? { ...user, ...formValues } : user))
+      );
+    } catch (err) {
+      console.error("❌ Error al actualizar el usuario:", err);
+      toast.error("Error al actualizar el usuario.");
+    }
+  };
+
+  // 🔹 Función para cambiar el estado del usuario
+  const handleChangeUserStatus = async (userId, estado, username) => {
+    const confirmacion = await Swal.fire({
+      title: `¿Seguro que deseas cambiar el estado de ${username}?`,
+      text: `El estado será cambiado a "${estado}"`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#28a745",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, cambiar estado"
+    });
+
+    if (!confirmacion.isConfirmed) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `http://localhost:5000/api/admin/usuarios/${userId}/estado`,
+        { estado },
+        { headers: { "x-auth-token": token } }
+      );
+
+      toast.success(`Usuario ${username} ahora está ${estado}.`);
+      setUsuarios((prev) =>
+        prev.map((user) => (user._id === userId ? { ...user, estado } : user))
+      );
+    } catch (err) {
+      console.error("❌ Error al actualizar el estado del usuario:", err);
+      toast.error("Error al actualizar el estado del usuario.");
+    }
+  };
+
+  // 🔹 Filtrar usuarios
   const usuariosFiltrados = usuarios.filter((usuario) => {
-    const nombre = usuario.username?.toLowerCase() || '';
-    const email = usuario.email?.toLowerCase() || '';
+    const nombre = usuario.username?.toLowerCase() || "";
+    const email = usuario.email?.toLowerCase() || "";
     return nombre.includes(searchTerm.toLowerCase()) || email.includes(searchTerm.toLowerCase());
   });
 
-  // Paginación
+  // 🔹 Paginación
   const usuariosPaginados = usuariosFiltrados.slice(
     (currentPage - 1) * usuariosPorPagina,
     currentPage * usuariosPorPagina
@@ -150,7 +152,6 @@ const UsersList = () => {
 
   return (
     <Box sx={{ mt: 4 }}>
-      {/* Barra de búsqueda */}
       <TextField
         fullWidth
         variant="outlined"
@@ -164,129 +165,54 @@ const UsersList = () => {
       />
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
           <CircularProgress color="primary" />
         </Box>
       ) : (
         <>
-<TableContainer 
-  component={Paper} 
-  sx={{ 
-    maxHeight: 400, 
-    boxShadow: 3, // Sombreado similar al de ReservationsTable
-    border: '1px solid #e0e0e0', // Borde sutil
-    borderRadius: 2, // Bordes redondeados
-    backgroundColor: 'white', // Fondo blanco
-  }}
->
-  <Table stickyHeader>
-    {/* Encabezado con fondo azul y texto blanco */}
-    <TableHead sx={{ '& .MuiTableCell-head': { backgroundColor: '#1976d2', color: 'white', fontWeight: 'bold' } }}>
-      <TableRow>
-        <TableCell>Nombre</TableCell>
-        <TableCell>Email</TableCell>
-        <TableCell>Rol</TableCell>
-        <TableCell>Estado</TableCell>
-        <TableCell>Acciones</TableCell>
-      </TableRow>
-    </TableHead>
-    <TableBody>
-      {usuariosPaginados.length > 0 ? (
-        usuariosPaginados.map((usuario) => (
-          <TableRow key={usuario._id} hover>
-            <TableCell>{usuario.username || 'Desconocido'}</TableCell>
-            <TableCell>{usuario.email || 'Sin Email'}</TableCell>
-            <TableCell>{usuario.role}</TableCell>
-            <TableCell>
-              <Chip
-                label={
-                  usuario.estado +
-                  (usuario.suspensionHasta
-                    ? ` (Hasta ${new Date(usuario.suspensionHasta).toLocaleDateString()})`
-                    : '')
-                }
-                sx={{
-                  bgcolor:
-                    usuario.estado === 'Habilitado'
-                      ? 'success.main'
-                      : usuario.estado === 'Deshabilitado'
-                      ? 'error.main'
-                      : '#FFEB3B',
-                  color: usuario.estado === 'Suspendido' ? 'black' : 'white'
-                }}
-              />
-            </TableCell>
-            <TableCell>
-              <Grid container spacing={1}>
-                {usuario.estado !== 'Habilitado' && (
-                  <Grid item>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      size="small"
-                      onClick={() =>
-                        handleChangeUserStatus(usuario._id, 'Habilitado', usuario.username)
-                      }
-                    >
-                      HABILITAR
-                    </Button>
-                  </Grid>
+          <TableContainer component={Paper} sx={{ maxHeight: 400, boxShadow: 3 }}>
+            <Table stickyHeader>
+              <TableHead sx={{ "& .MuiTableCell-head": { backgroundColor: "#1976d2", color: "white", fontWeight: "bold" } }}>
+                <TableRow>
+                  <TableCell>Nombre</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Rol</TableCell>
+                  <TableCell>Estado</TableCell>
+                  <TableCell>Acciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {usuariosPaginados.length > 0 ? (
+                  usuariosPaginados.map((usuario) => (
+                    <TableRow key={usuario._id} hover>
+                      <TableCell>{usuario.username || "Desconocido"}</TableCell>
+                      <TableCell>{usuario.email || "Sin Email"}</TableCell>
+                      <TableCell>{usuario.role}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={usuario.estado}
+                          color={usuario.estado === "Deshabilitado" ? "error" : "primary"}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Grid container spacing={1}>
+                          <Grid item>
+                            <Button variant="contained" color="primary" size="small" onClick={() => handleEditUser(usuario._id, usuario)}>
+                              MODIFICAR
+                            </Button>
+                          </Grid>
+                        </Grid>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">No hay usuarios registrados.</TableCell>
+                  </TableRow>
                 )}
-                {usuario.estado !== 'Suspendido' && (
-                  <Grid item>
-                    <Button
-                      variant="contained"
-                      sx={{ bgcolor: '#FFEB3B', color: 'black' }}
-                      size="small"
-                      onClick={() =>
-                        handleChangeUserStatus(usuario._id, 'Suspendido', usuario.username)
-                      }
-                    >
-                      SUSPENDER
-                    </Button>
-                  </Grid>
-                )}
-                {usuario.estado !== 'Deshabilitado' && (
-                  <Grid item>
-                    <Button
-                      variant="contained"
-                      color="error"
-                      size="small"
-                      onClick={() =>
-                        handleChangeUserStatus(usuario._id, 'Deshabilitado', usuario.username)
-                      }
-                    >
-                      DESHABILITAR
-                    </Button>
-                  </Grid>
-                )}
-              </Grid>
-            </TableCell>
-          </TableRow>
-        ))
-      ) : (
-        <TableRow>
-          <TableCell colSpan={5} align="center">
-            <Typography color="error" fontWeight="bold">
-              No hay usuarios registrados.
-            </Typography>
-          </TableCell>
-        </TableRow>
-      )}
-    </TableBody>
-  </Table>
-</TableContainer>
-
-          {usuariosFiltrados.length > usuariosPorPagina && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-              <Pagination
-                count={Math.ceil(usuariosFiltrados.length / usuariosPorPagina)}
-                page={currentPage}
-                onChange={(e, page) => setCurrentPage(page)}
-                color="primary"
-              />
-            </Box>
-          )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </>
       )}
     </Box>

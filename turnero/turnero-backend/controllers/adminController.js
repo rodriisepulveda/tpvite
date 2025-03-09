@@ -55,6 +55,29 @@ const getEstadisticas = async (req, res) => {
     }
 };
 
+// 📌 **Modificar un usuario (sin cambiar la contraseña)**
+const updateUser = async (req, res) => {
+    const { id } = req.params;
+    const { username, email, role } = req.body;
+  
+    try {
+      let user = await User.findById(id);
+      if (!user) {
+        return res.status(404).json({ msg: "Usuario no encontrado" });
+      }
+  
+      user.username = username || user.username;
+      user.email = email || user.email;
+      user.role = role || user.role;
+  
+      await user.save();
+      res.json({ msg: "Usuario actualizado correctamente", user });
+    } catch (err) {
+      console.error("❌ Error en updateUser:", err);
+      res.status(500).json({ msg: "Error al actualizar usuario." });
+    }
+  };
+
 // Obtener lista de usuarios con estado y suspensión
 const getUsuarios = async (req, res) => {
     try {
@@ -136,5 +159,6 @@ module.exports = {
     getEstadisticas,
     getUsuarios,
     getReservas,
-    updateUserStatus
+    updateUserStatus,
+    updateUser, // 🔹 Agregado
 };

@@ -9,5 +9,7 @@ router.get("/estadisticas", auth, isAdmin, adminController.getEstadisticas);
 router.get("/reservas", auth, isAdmin, adminController.getReservas);
 router.get("/usuarios", auth, isAdmin, adminController.getUsuarios);
 router.put("/usuarios/:id/estado", auth, isAdmin, adminController.updateUserStatus);
+router.put("/usuarios/:id", auth, isAdmin, adminController.updateUser);
+
 
 module.exports = router;
