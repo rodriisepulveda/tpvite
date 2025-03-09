@@ -51,7 +51,6 @@ const UsersList = () => {
     }
   };
 
-  // 🔹 Función para cambiar el estado del usuario (Habilitar/Deshabilitar)
   const handleChangeUserStatus = async (userId, nuevoEstado, username) => {
     const confirmacion = await Swal.fire({
       title: `¿${nuevoEstado === "Habilitado" ? "Habilitar" : "Deshabilitar"} a ${username}?`,
@@ -81,7 +80,6 @@ const UsersList = () => {
     }
   };
 
-  // 🔹 Función para suspender un usuario con duración
   const handleSuspendUser = async (userId, username) => {
     const { value: tiempo } = await Swal.fire({
       title: "Selecciona la duración de la suspensión",
@@ -131,6 +129,46 @@ const UsersList = () => {
     }
   };
 
+  const handleEditUser = async (user) => {
+    const { value: formValues } = await Swal.fire({
+      title: `Editar usuario: ${user.username}`,
+      html:
+        `<input id="swal-username" class="swal2-input" placeholder="Nombre" value="${user.username}">` +
+        `<input id="swal-email" class="swal2-input" placeholder="Email" value="${user.email}">` +
+        `<select id="swal-role" class="swal2-select">
+          <option value="user" ${user.role === "user" ? "selected" : ""}>Usuario</option>
+          <option value="admin" ${user.role === "admin" ? "selected" : ""}>Administrador</option>
+        </select>`,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: "Guardar",
+      preConfirm: () => {
+        return {
+          username: document.getElementById("swal-username").value,
+          email: document.getElementById("swal-email").value,
+          role: document.getElementById("swal-role").value
+        };
+      }
+    });
+
+    if (!formValues) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `http://localhost:5000/api/admin/usuarios/${user._id}`,
+        formValues,
+        { headers: { "x-auth-token": token } }
+      );
+
+      toast.success("Usuario actualizado correctamente.");
+      fetchUsuarios();
+    } catch (err) {
+      console.error("❌ Error al actualizar el usuario:", err);
+      toast.error("Error al actualizar el usuario.");
+    }
+  };
+
   return (
     <Box sx={{ mt: 4 }}>
       <TableContainer component={Paper} sx={{ maxHeight: 400, boxShadow: 3 }}>
@@ -166,45 +204,26 @@ const UsersList = () => {
                 </TableCell>
                 <TableCell>
                   <Grid container spacing={1}>
-                    {/* Si el usuario está suspendido o deshabilitado, mostrar "Habilitar" */}
-                    {(usuario.estado === "Suspendido" || usuario.estado === "Deshabilitado") && (
-                      <Grid item>
-                        <Button
-                          variant="contained"
-                          color="success"
-                          size="small"
-                          onClick={() => handleChangeUserStatus(usuario._id, "Habilitado", usuario.username)}
-                        >
-                          HABILITAR
-                        </Button>
-                      </Grid>
-                    )}
-                    {/* Si está habilitado, mostrar botón de suspensión */}
-                    {usuario.estado === "Habilitado" && (
-                      <Grid item>
-                        <Button
-                          variant="contained"
-                          color="warning"
-                          size="small"
-                          onClick={() => handleSuspendUser(usuario._id, usuario.username)}
-                        >
-                          SUSPENDER
-                        </Button>
-                      </Grid>
-                    )}
-                    {/* Si no está deshabilitado, mostrar botón de deshabilitar */}
-                    {usuario.estado !== "Deshabilitado" && usuario.estado !== "Suspendido" && (
-                      <Grid item>
-                        <Button
-                          variant="contained"
-                          color="error"
-                          size="small"
-                          onClick={() => handleChangeUserStatus(usuario._id, "Deshabilitado", usuario.username)}
-                        >
-                          DESHABILITAR
-                        </Button>
-                      </Grid>
-                    )}
+                    <Grid item>
+                      <Button variant="contained" color="info" size="small" onClick={() => handleEditUser(usuario)}>
+                        MODIFICAR
+                      </Button>
+                    </Grid>
+                    <Grid item>
+                      <Button
+                        variant="contained"
+                        color={usuario.estado === "Habilitado" ? "error" : "success"}
+                        size="small"
+                        onClick={() => handleChangeUserStatus(usuario._id, usuario.estado === "Habilitado" ? "Deshabilitado" : "Habilitado", usuario.username)}
+                      >
+                        {usuario.estado === "Habilitado" ? "DESHABILITAR" : "HABILITAR"}
+                      </Button>
+                    </Grid>
+                    <Grid item>
+                      <Button variant="contained" color="warning" size="small" onClick={() => handleSuspendUser(usuario._id, usuario.username)}>
+                        SUSPENDER
+                      </Button>
+                    </Grid>
                   </Grid>
                 </TableCell>
               </TableRow>
