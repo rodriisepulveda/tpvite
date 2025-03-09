@@ -6,6 +6,7 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // 🔹 Nuevo estado de carga
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -26,6 +27,8 @@ export const AuthProvider = ({ children }) => {
         setUser(storedUser);
       }
     }
+
+    setLoading(false); // 🔹 Una vez cargado el `user`, deja de estar en estado de carga
 
     const interceptor = axios.interceptors.response.use(
       (response) => response,
@@ -74,8 +77,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
-      {children}
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, loading }}>
+      {!loading && children} {/* 🔹 Evita redirigir antes de cargar el estado */}
     </AuthContext.Provider>
   );
 };
