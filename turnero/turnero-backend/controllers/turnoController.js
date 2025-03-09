@@ -34,9 +34,11 @@ const createTurno = async (req, res, next) => {
 
     const startDateTime = getTurnoDateTime(date, startTime);
     const endDateTime = getTurnoDateTime(date, endTime);
+    // Almacenar la fecha en GMT-3 (medianoche) para que la comparación sea consistente
+    const turnoDate = getTurnoDateTime(date, "00:00");
 
     const existingTurno = await Turno.findOne({
-      date: new Date(date),
+      date: turnoDate,
       startTime: startDateTime,
       cancha,
       status: "reservado",
@@ -47,7 +49,7 @@ const createTurno = async (req, res, next) => {
     }
 
     const newTurno = new Turno({
-      date: new Date(date),
+      date: turnoDate,
       startTime: startDateTime,
       endTime: endDateTime,
       title,
@@ -127,7 +129,8 @@ const getTurnoById = async (req, res, next) => {
   }
 };
 
-// Actualizar un turno existente
+// Actualizar un turno existente (para editar reserva)
+// Se almacena el horario anterior y se actualiza con el nuevo. De este modo, el horario viejo queda libre.
 const updateTurno = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -143,20 +146,27 @@ const updateTurno = async (req, res, next) => {
       });
     }
 
-    const startDateTime = getTurnoDateTime(date, startTime);
-    const endDateTime = getTurnoDateTime(date, endTime);
+    const newStartDateTime = getTurnoDateTime(date, startTime);
+    const newEndDateTime = getTurnoDateTime(date, endTime);
+    const newTurnoDate = getTurnoDateTime(date, "00:00");
 
     const turno = await Turno.findById(req.params.id);
     if (!turno) {
       return res.status(404).json({ msg: "Turno no encontrado" });
     }
 
-    turno.date = new Date(date);
-    turno.startTime = startDateTime;
-    turno.endTime = endDateTime;
+    // Guardamos el horario anterior para propósitos de depuración o log
+    const oldStartTime = turno.startTime;
+    const oldEndTime = turno.endTime;
+
+    turno.date = newTurnoDate;
+    turno.startTime = newStartDateTime;
+    turno.endTime = newEndDateTime;
     turno.cancha = cancha;
 
     const updatedTurno = await turno.save();
+    console.log("Reserva actualizada. Horario anterior:", oldStartTime, "-", oldEndTime, 
+                " | Nuevo horario:", newStartDateTime, "-", newEndDateTime);
     res.json(updatedTurno);
   } catch (err) {
     console.error("Error en updateTurno:", err);
@@ -177,7 +187,6 @@ const updateTurnosConcluidos = async () => {
     for (const turno of turnosVencidos) {
       turno.status = "concluido";
       await turno.save();
-      // Ya no se actualizan horarios en la cancha, pues se usan los predefinidos
     }
 
     console.log(`✅ ${turnosVencidos.length} turnos actualizados a 'concluido'.`);
@@ -187,6 +196,7 @@ const updateTurnosConcluidos = async () => {
 };
 
 // Cancelar un turno
+// Si el turno aún no inició, se elimina el documento, liberando el horario
 const cancelTurno = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -203,8 +213,8 @@ const cancelTurno = async (req, res, next) => {
     await turno.save();
 
     const ahoraGMT3 = getGMT3Date();
-    if (turno.startTime > ahoraGMT3) {
-      // No se actualizan horarios en la cancha; simplemente se elimina el turno si aún no inició
+    if (turno.startTime.getTime() > ahoraGMT3.getTime()) {
+      // Si el turno aún no inició, lo eliminamos para liberar el horario
       await Turno.deleteOne({ _id: turno._id });
     }
 
@@ -215,7 +225,6 @@ const cancelTurno = async (req, res, next) => {
   }
 };
 
-// Exportar funciones
 module.exports = {
   createTurno,
   getHorariosLibres,
