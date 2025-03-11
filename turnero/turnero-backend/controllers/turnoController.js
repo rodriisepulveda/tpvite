@@ -69,6 +69,7 @@ const createTurno = async (req, res, next) => {
 };
 
 // Obtener horarios libres de una cancha usando horarios predefinidos
+// Obtener horarios libres de una cancha usando horarios predefinidos
 const getHorariosLibres = async (req, res, next) => {
   try {
     await updateTurnosConcluidos();
@@ -88,12 +89,20 @@ const getHorariosLibres = async (req, res, next) => {
     }).select("startTime endTime");
 
     // Filtrar los horarios predefinidos que no estén ocupados
-    const horariosLibres = horariosPredefinidos.filter((horario) => {
+    let horariosLibres = horariosPredefinidos.filter((horario) => {
       return !turnosOcupados.some((turno) => {
-        return turno.startTime.getTime() === getTurnoDateTime(date, horario.startTime).getTime() &&
-               turno.endTime.getTime() === getTurnoDateTime(date, horario.endTime).getTime();
+        return (
+          turno.startTime.getTime() === getTurnoDateTime(date, horario.startTime).getTime() &&
+          turno.endTime.getTime() === getTurnoDateTime(date, horario.endTime).getTime()
+        );
       });
     });
+
+    // Asignar un _id único a cada horario
+    horariosLibres = horariosLibres.map((horario, index) => ({
+      _id: String(index), // o cualquier identificador único
+      ...horario
+    }));
 
     res.json(horariosLibres);
   } catch (err) {
@@ -101,6 +110,7 @@ const getHorariosLibres = async (req, res, next) => {
     next(err);
   }
 };
+
 
 // Obtener reservas del usuario autenticado
 const getMyTurnos = async (req, res, next) => {

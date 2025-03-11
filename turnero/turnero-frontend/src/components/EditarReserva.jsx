@@ -20,7 +20,7 @@ import {
   FormControlLabel
 } from "@mui/material";
 
-// Función para formatear fecha sin zona horaria
+// Función para formatear fecha sin zona horaria (devuelve "YYYY-MM-DD")
 const parseDateWithoutTimezone = (dateString) => {
   const [year, month, day] = dateString.split("T")[0].split("-");
   return `${year}-${month}-${day}`;
@@ -34,9 +34,7 @@ const EditarReserva = () => {
   const [turnosLibres, setTurnosLibres] = useState([]);
   const [selectedTurno, setSelectedTurno] = useState("");
   const [loading, setLoading] = useState(false);
-  const [fechaNueva, setFechaNueva] = useState(
-    parseDateWithoutTimezone(new Date().toISOString())
-  );
+  const [fechaNueva, setFechaNueva] = useState(parseDateWithoutTimezone(new Date().toISOString()));
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -44,13 +42,11 @@ const EditarReserva = () => {
     const fetchReserva = async () => {
       setLoading(true);
       const token = localStorage.getItem("token");
-
       if (!token) {
         toast.error("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.");
         navigate("/login");
         return;
       }
-
       try {
         const res = await axios.get(`http://localhost:5000/api/turnos/id/${id}`, {
           headers: { "x-auth-token": token },
@@ -78,6 +74,8 @@ const EditarReserva = () => {
         headers: { "x-auth-token": token },
       });
       setTurnosLibres(res.data);
+      // Al cambiar la fecha, limpiamos la selección actual
+      setSelectedTurno("");
     } catch (err) {
       console.error("Error al obtener los turnos libres:", err);
       toast.error("Error al obtener los turnos libres.");
@@ -89,7 +87,6 @@ const EditarReserva = () => {
       toast.error("Por favor selecciona un turno para continuar.");
       return;
     }
-
     const token = localStorage.getItem("token");
     const result = await Swal.fire({
       title: "¿Estás seguro?",
@@ -101,9 +98,7 @@ const EditarReserva = () => {
       confirmButtonText: "Sí, actualizar",
       cancelButtonText: "Cancelar",
     });
-
     if (!result.isConfirmed) return;
-
     try {
       await axios.put(
         `http://localhost:5000/api/turnos/${id}`,
